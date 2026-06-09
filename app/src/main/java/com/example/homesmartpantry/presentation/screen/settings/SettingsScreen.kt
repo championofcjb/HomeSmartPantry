@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Card
@@ -34,7 +35,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    onShoppingListClick: () -> Unit
+    onShoppingListClick: () -> Unit,
+    onFavoritesClick: () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -64,6 +66,15 @@ fun SettingsScreen(
                     title = "采购清单",
                     subtitle = "查看和管理待采购食材",
                     onClick = onShoppingListClick
+                )
+            }
+
+            item {
+                SettingsCard(
+                    icon = Icons.Default.Favorite,
+                    title = "收藏菜谱",
+                    subtitle = "查看和管理已收藏的菜谱",
+                    onClick = onFavoritesClick
                 )
             }
 

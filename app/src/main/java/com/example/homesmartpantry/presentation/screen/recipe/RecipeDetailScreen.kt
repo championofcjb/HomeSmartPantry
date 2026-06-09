@@ -62,7 +62,8 @@ fun RecipeDetailScreen(
     recipeId: Long,
     viewModel: RecipeViewModel,
     onBack: () -> Unit,
-    onEdit: (Long) -> Unit
+    onEdit: (Long) -> Unit,
+    onAddedToTodayCook: () -> Unit = {}
 ) {
     val detailState by viewModel.detailState.collectAsState()
     val isInTodayCook by viewModel.isInTodayCook.collectAsState()
@@ -107,14 +108,14 @@ fun RecipeDetailScreen(
             ) {
                 OutlinedButton(
                     onClick = {
+                        val wasIn = isInTodayCook
                         viewModel.toggleTodayCook(recipeId)
                         scope.launch {
-                            if (isInTodayCook) {
-                                snackbarHostState.showSnackbar("已从今日做菜移除")
-                            } else {
-                                snackbarHostState.showSnackbar("已加入今日做菜")
-                            }
+                            snackbarHostState.showSnackbar(
+                                if (wasIn) "已从今日做菜移除" else "已加入今日做菜"
+                            )
                         }
+                        onAddedToTodayCook()
                     },
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = MaterialTheme.shapes.small,

@@ -10,7 +10,10 @@ object NavRoutes {
     const val SETTINGS = "settings"
     const val SHOPPING_LIST = "shopping_list"
     const val TODAY_COOK = "today_cook"
+    const val FAVORITES = "favorites"
+    const val EDIT_INVENTORY = "edit_inventory/{inventoryId}"
 
     fun recipeDetail(id: Long) = "recipe_detail/$id"
     fun editRecipe(id: Long) = "edit_recipe/$id"
+    fun editInventory(id: Long) = "edit_inventory/$id"
 }

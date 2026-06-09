@@ -164,6 +164,10 @@ class IngredientRepository(
         return recipeDao.getAllRecipes().map { entities -> entities.map { it.toDomain() } }
     }
 
+    fun getFavoriteRecipes(): Flow<List<com.example.homesmartpantry.domain.model.Recipe>> {
+        return recipeDao.getFavoriteRecipes().map { entities -> entities.map { it.toDomain() } }
+    }
+
     suspend fun getRecipeById(id: Long): com.example.homesmartpantry.domain.model.Recipe? {
         return recipeDao.getRecipeById(id)?.toDomain()
     }

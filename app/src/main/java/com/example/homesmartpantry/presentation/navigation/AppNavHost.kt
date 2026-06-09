@@ -1,9 +1,15 @@
 package com.example.homesmartpantry.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -11,10 +17,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.homesmartpantry.data.repository.IngredientRepository
+import com.example.homesmartpantry.presentation.screen.favorites.FavoritesScreen
 import com.example.homesmartpantry.presentation.screen.home.HomeScreen
 import com.example.homesmartpantry.presentation.screen.home.HomeViewModel
 import com.example.homesmartpantry.presentation.screen.ingredient.AddIngredientScreen
 import com.example.homesmartpantry.presentation.screen.ingredient.AddIngredientViewModel
+import com.example.homesmartpantry.presentation.screen.ingredient.EditIngredientScreen
 import com.example.homesmartpantry.presentation.screen.recipe.AddEditRecipeScreen
 import com.example.homesmartpantry.presentation.screen.recipe.RecipeDetailScreen
 import com.example.homesmartpantry.presentation.screen.recipe.RecipeListScreen
@@ -50,6 +58,7 @@ fun AppNavHost(
                     }
                 },
                 onShoppingListClick = { navController.navigate(NavRoutes.SHOPPING_LIST) },
+                onEditItemClick = { id -> navController.navigate(NavRoutes.editInventory(id)) },
                 onSelectionModeChanged = onSelectionModeChanged
             )
         }
@@ -65,7 +74,8 @@ fun AppNavHost(
             RecipeListScreen(
                 viewModel = recipeViewModel,
                 onAddClick = { navController.navigate(NavRoutes.ADD_RECIPE) },
-                onRecipeClick = { id -> navController.navigate(NavRoutes.recipeDetail(id)) }
+                onRecipeClick = { id -> navController.navigate(NavRoutes.recipeDetail(id)) },
+                onFavoritesClick = { navController.navigate(NavRoutes.FAVORITES) }
             )
         }
 
@@ -97,7 +107,10 @@ fun AppNavHost(
                 recipeId = recipeId,
                 viewModel = recipeViewModel,
                 onBack = { navController.popBackStack() },
-                onEdit = { navController.navigate(NavRoutes.editRecipe(recipeId)) }
+                onEdit = { navController.navigate(NavRoutes.editRecipe(recipeId)) },
+                onAddedToTodayCook = {
+                    navController.popBackStack(NavRoutes.RECIPES, inclusive = false)
+                }
             )
         }
 
@@ -120,7 +133,8 @@ fun AppNavHost(
         composable(NavRoutes.SETTINGS) {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
-                onShoppingListClick = { navController.navigate(NavRoutes.SHOPPING_LIST) }
+                onShoppingListClick = { navController.navigate(NavRoutes.SHOPPING_LIST) },
+                onFavoritesClick = { navController.navigate(NavRoutes.FAVORITES) }
             )
         }
 
@@ -129,6 +143,58 @@ fun AppNavHost(
                 viewModel = recipeViewModel,
                 onRecipeClick = { id -> navController.navigate(NavRoutes.recipeDetail(id)) },
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(NavRoutes.FAVORITES) {
+            FavoritesScreen(
+                favoriteRecipes = repository.getFavoriteRecipes(),
+                onBack = { navController.popBackStack() },
+                onRecipeClick = { id -> navController.navigate(NavRoutes.recipeDetail(id)) },
+                onRemoveFavorite = { id ->
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        repository.setFavorite(id, false)
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = NavRoutes.EDIT_INVENTORY,
+            arguments = listOf(navArgument("inventoryId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val inventoryId = backStackEntry.arguments?.getLong("inventoryId") ?: return@composable
+            val inventoryItem = remember { mutableStateOf<com.example.homesmartpantry.domain.model.InventoryItem?>(null) }
+
+            LaunchedEffect(inventoryId) {
+                inventoryItem.value = repository.getAllInventory().first()
+                    .find { it.id == inventoryId }
+            }
+
+            EditIngredientScreen(
+                item = inventoryItem.value,
+                onBack = { navController.popBackStack() },
+                onSave = { qty, loc, price, expireDate ->
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        if (qty <= 0) {
+                            repository.deleteInventory(inventoryId)
+                        } else {
+                            repository.updateQuantity(inventoryId, qty)
+                            val entity = repository.getInventoryById(inventoryId)?.copy(
+                                storageLocation = loc,
+                                price = price,
+                                expireDate = expireDate
+                            )
+                            if (entity != null) repository.updateInventoryEntity(entity)
+                        }
+                    }
+                },
+                onDelete = {
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        repository.deleteInventory(inventoryId)
+                    }
+                    navController.popBackStack()
+                }
             )
         }
     }

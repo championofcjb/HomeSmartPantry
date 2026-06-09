@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -56,7 +57,8 @@ import java.util.Locale
 fun RecipeListScreen(
     viewModel: RecipeViewModel,
     onAddClick: () -> Unit,
-    onRecipeClick: (Long) -> Unit
+    onRecipeClick: (Long) -> Unit,
+    onFavoritesClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var query by remember { mutableStateOf("") }
@@ -64,6 +66,12 @@ fun RecipeListScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("菜谱") },
+            actions = {
+                IconButton(onClick = onFavoritesClick) {
+                    Icon(Icons.Default.Favorite, contentDescription = "收藏菜谱",
+                        tint = MaterialTheme.colorScheme.onPrimary)
+                }
+            },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 titleContentColor = MaterialTheme.colorScheme.onPrimary

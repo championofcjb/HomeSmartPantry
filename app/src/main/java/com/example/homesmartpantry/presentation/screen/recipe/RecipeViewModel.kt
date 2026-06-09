@@ -344,8 +344,10 @@ class RecipeViewModel(
         viewModelScope.launch {
             if (repository.isInTodayCook(recipeId)) {
                 repository.removeFromTodayCook(recipeId)
+                _isInTodayCook.value = false
             } else {
                 repository.addToTodayCook(recipeId)
+                _isInTodayCook.value = true
             }
         }
     }

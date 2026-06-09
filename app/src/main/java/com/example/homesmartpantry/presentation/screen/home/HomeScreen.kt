@@ -66,6 +66,7 @@ fun HomeScreen(
     onAddClick: () -> Unit,
     onRecipesClick: () -> Unit = {},
     onShoppingListClick: () -> Unit = {},
+    onEditItemClick: (Long) -> Unit = {},
     onSelectionModeChanged: (Boolean) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -302,7 +303,8 @@ fun HomeScreen(
                             },
                             onUpdateQuantity = { newQty ->
                                 viewModel.updateQuantity(item.id, newQty)
-                            }
+                            },
+                            onEditClick = { onEditItemClick(item.id) }
                         )
                     }
                 }
@@ -319,7 +321,8 @@ fun InventoryCard(
     isSelected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    onUpdateQuantity: (Double) -> Unit
+    onUpdateQuantity: (Double) -> Unit,
+    onEditClick: (() -> Unit)? = null
 ) {
     var showQuantityDialog by remember { mutableStateOf(false) }
 
@@ -478,7 +481,8 @@ fun InventoryCard(
                 onUpdateQuantity(newQty)
                 showQuantityDialog = false
             },
-            onDismiss = { showQuantityDialog = false }
+            onDismiss = { showQuantityDialog = false },
+            onEditDetails = onEditClick
         )
     }
 }
@@ -487,7 +491,8 @@ fun InventoryCard(
 private fun ItemEditDialog(
     item: InventoryItem,
     onConfirm: (Double, String, Double?) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onEditDetails: (() -> Unit)? = null
 ) {
     var qtyInput by remember { mutableStateOf(formatQuantity(item.quantity)) }
     var loc by remember { mutableStateOf(item.storageLocation) }
@@ -533,7 +538,19 @@ private fun ItemEditDialog(
                 enabled = qtyInput.toDoubleOrNull() != null
             ) { Text("保存") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = {
+            Row {
+                if (onEditDetails != null) {
+                    TextButton(onClick = {
+                        onDismiss()
+                        onEditDetails()
+                    }) {
+                        Text("详细编辑", color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                TextButton(onClick = onDismiss) { Text("取消") }
+            }
+        }
     )
 }
 
