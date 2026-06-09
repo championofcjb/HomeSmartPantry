@@ -39,4 +39,20 @@ class HomeViewModel(
             repository.deleteInventory(id)
         }
     }
+
+    fun updateQuantity(id: Long, newQuantity: Double) {
+        viewModelScope.launch {
+            if (newQuantity <= 0) {
+                repository.deleteInventory(id)
+            } else {
+                repository.updateQuantity(id, newQuantity)
+            }
+        }
+    }
+
+    fun deleteItems(ids: List<Long>) {
+        viewModelScope.launch {
+            ids.forEach { id -> repository.deleteInventory(id) }
+        }
+    }
 }

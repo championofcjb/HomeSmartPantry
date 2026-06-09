@@ -23,5 +23,8 @@ data class InventoryEntity(
     val familyId: String = "default",
     val ingredientId: Long,
     val quantity: Double,
-    val expireDate: Long? = null // timestamp, nullable
+    val expireDate: Long? = null, // timestamp, nullable
+    val storageLocation: String = "冰箱冷藏", // 冰箱冷藏, 冰箱冷冻, 常温储藏
+    val purchaseDate: Long? = null, // timestamp
+    val price: Double? = null // 花费价格
 )

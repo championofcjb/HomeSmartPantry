@@ -19,8 +19,18 @@ class IngredientRepository(
 ) {
     fun getAllIngredients(): Flow<List<Ingredient>> {
         return ingredientDao.getAllIngredients().map { entities ->
-            entities.map { Ingredient(it.id, it.name, it.unit) }
+            entities.map { Ingredient(it.id, it.name, it.unit, it.category) }
         }
+    }
+
+    suspend fun addIngredient(name: String, unit: String, category: String = "食材", imageUri: String? = null): Long {
+        val entity = com.example.homesmartpantry.data.local.entity.IngredientEntity(
+            name = name,
+            unit = unit,
+            category = category,
+            imageUri = imageUri
+        )
+        return ingredientDao.insert(entity)
     }
 
     fun getAllInventory(): Flow<List<InventoryItem>> {
@@ -37,6 +47,9 @@ class IngredientRepository(
         ingredientId: Long,
         quantity: Double,
         expireDate: Long? = null,
+        storageLocation: String = "冰箱冷藏",
+        purchaseDate: Long? = null,
+        price: Double? = null,
         familyId: String = "default",
         deviceId: String = ""
     ): Long {
@@ -44,7 +57,10 @@ class IngredientRepository(
             familyId = familyId,
             ingredientId = ingredientId,
             quantity = quantity,
-            expireDate = expireDate
+            expireDate = expireDate,
+            storageLocation = storageLocation,
+            purchaseDate = purchaseDate,
+            price = price
         )
         val inventoryId = inventoryDao.insert(inventoryEntity)
 
@@ -99,7 +115,12 @@ class IngredientRepository(
                 ingredientName = ingredient?.name ?: "未知",
                 unit = ingredient?.unit ?: "",
                 quantity = entity.quantity,
-                expireDate = entity.expireDate
+                expireDate = entity.expireDate,
+                category = ingredient?.category ?: "食材",
+                storageLocation = entity.storageLocation,
+                purchaseDate = entity.purchaseDate,
+                price = entity.price,
+                imageUri = ingredient?.imageUri
             )
         }
     }
@@ -115,7 +136,12 @@ class IngredientRepository(
                 ingredientName = ingredient?.name ?: "未知",
                 unit = ingredient?.unit ?: "",
                 quantity = entity.quantity,
-                expireDate = entity.expireDate
+                expireDate = entity.expireDate,
+                category = ingredient?.category ?: "食材",
+                storageLocation = entity.storageLocation,
+                purchaseDate = entity.purchaseDate,
+                price = entity.price,
+                imageUri = ingredient?.imageUri
             )
         }
     }
@@ -127,5 +153,10 @@ private fun InventoryWithIngredient.toDomainModel() = InventoryItem(
     ingredientName = ingredientName,
     unit = unit,
     quantity = quantity,
-    expireDate = expireDate
+    expireDate = expireDate,
+    category = category,
+    storageLocation = storageLocation,
+    purchaseDate = purchaseDate,
+    price = price,
+    imageUri = imageUri
 )

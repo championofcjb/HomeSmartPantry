@@ -1,9 +1,13 @@
 package com.example.homesmartpantry
 
 import android.app.Application
+import android.os.Build
 import com.example.homesmartpantry.data.local.AppDatabase
 import com.example.homesmartpantry.data.repository.IngredientRepository
+import com.example.homesmartpantry.presentation.notification.ExpiryAlarmReceiver
+import com.example.homesmartpantry.presentation.notification.NotificationHelper
 import com.example.homesmartpantry.presentation.screen.home.HomeViewModel
+import com.example.homesmartpantry.presentation.screen.ingredient.AddIngredientViewModel
 
 class HomeSmartPantryApp : Application() {
 
@@ -15,6 +19,8 @@ class HomeSmartPantryApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Initialize database and repository
         database = AppDatabase.getInstance(this)
         repository = IngredientRepository(
             ingredientDao = database.ingredientDao(),
@@ -22,9 +28,17 @@ class HomeSmartPantryApp : Application() {
             eventDao = database.inventoryEventDao(),
             recipeDao = database.recipeDao()
         )
+
+        // Setup notification channel and schedule alarms
+        NotificationHelper.createNotificationChannel(this)
+        ExpiryAlarmReceiver.scheduleDailyChecks(this)
     }
 
     fun createHomeViewModel(): HomeViewModel {
         return HomeViewModel(repository)
+    }
+
+    fun createAddIngredientViewModel(): AddIngredientViewModel {
+        return AddIngredientViewModel(repository)
     }
 }

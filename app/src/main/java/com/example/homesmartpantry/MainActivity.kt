@@ -1,9 +1,12 @@
 package com.example.homesmartpantry
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -12,6 +15,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -21,11 +27,22 @@ import com.example.homesmartpantry.presentation.navigation.NavRoutes
 import com.example.homesmartpantry.ui.theme.HomeSmartPantryTheme
 
 class MainActivity : ComponentActivity() {
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Request notification permission on Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
         val app = application as HomeSmartPantryApp
         val homeViewModel = app.createHomeViewModel()
+        val addIngredientViewModel = app.createAddIngredientViewModel()
 
         enableEdgeToEdge()
         setContent {
@@ -33,13 +50,16 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
+                var isSelectionMode by remember { mutableStateOf(false) }
 
                 Scaffold(
                     bottomBar = {
-                        BottomNavBar(navController = navController)
+                        if (!isSelectionMode) {
+                            BottomNavBar(navController = navController)
+                        }
                     },
                     floatingActionButton = {
-                        if (currentRoute == NavRoutes.HOME) {
+                        if (currentRoute == NavRoutes.HOME && !isSelectionMode) {
                             FloatingActionButton(
                                 onClick = {
                                     navController.navigate(NavRoutes.ADD_INGREDIENT)
@@ -58,7 +78,9 @@ class MainActivity : ComponentActivity() {
                     AppNavHost(
                         navController = navController,
                         homeViewModel = homeViewModel,
-                        modifier = Modifier.padding(innerPadding)
+                        addIngredientViewModel = addIngredientViewModel,
+                        modifier = Modifier.padding(innerPadding),
+                        onSelectionModeChanged = { isSelectionMode = it }
                     )
                 }
             }

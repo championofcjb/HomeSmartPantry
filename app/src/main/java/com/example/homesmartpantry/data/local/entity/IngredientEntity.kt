@@ -8,5 +8,7 @@ data class IngredientEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,
-    val unit: String // g, ml, 个, 瓶, 袋...
+    val unit: String, // g, ml, 个, 瓶, 袋...
+    val category: String = "食材", // 食材, 调味料, 主食粮油
+    val imageUri: String? = null
 )

@@ -22,7 +22,7 @@ import com.example.homesmartpantry.data.local.entity.RecipeIngredientEntity
         RecipeEntity::class,
         RecipeIngredientEntity::class
     ],
-    version = 1,
+    version = 3,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

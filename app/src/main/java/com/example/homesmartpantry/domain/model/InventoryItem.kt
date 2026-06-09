@@ -6,7 +6,12 @@ data class InventoryItem(
     val ingredientName: String,
     val unit: String,
     val quantity: Double,
-    val expireDate: Long? = null
+    val expireDate: Long? = null,
+    val category: String = "食材",
+    val storageLocation: String = "冰箱冷藏",
+    val purchaseDate: Long? = null,
+    val price: Double? = null,
+    val imageUri: String? = null
 ) {
     val isExpiringSoon: Boolean
         get() {

@@ -8,12 +8,15 @@ import androidx.navigation.compose.composable
 import com.example.homesmartpantry.presentation.screen.home.HomeScreen
 import com.example.homesmartpantry.presentation.screen.home.HomeViewModel
 import com.example.homesmartpantry.presentation.screen.ingredient.AddIngredientScreen
+import com.example.homesmartpantry.presentation.screen.ingredient.AddIngredientViewModel
 
 @Composable
 fun AppNavHost(
     navController: NavHostController,
     homeViewModel: HomeViewModel,
-    modifier: Modifier = Modifier
+    addIngredientViewModel: AddIngredientViewModel,
+    modifier: Modifier = Modifier,
+    onSelectionModeChanged: (Boolean) -> Unit = {}
 ) {
     NavHost(
         navController = navController,
@@ -25,12 +28,14 @@ fun AppNavHost(
                 viewModel = homeViewModel,
                 onAddClick = {
                     navController.navigate(NavRoutes.ADD_INGREDIENT)
-                }
+                },
+                onSelectionModeChanged = onSelectionModeChanged
             )
         }
 
         composable(NavRoutes.ADD_INGREDIENT) {
             AddIngredientScreen(
+                viewModel = addIngredientViewModel,
                 onBack = { navController.popBackStack() }
             )
         }

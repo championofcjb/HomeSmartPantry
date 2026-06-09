@@ -2,31 +2,34 @@ package com.example.homesmartpantry.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// 主色 - 深墨绿（新鲜食材）
-val GreenPrimary = Color(0xFF2E7D32)
-val GreenPrimaryDark = Color(0xFF1B5E20)
-val GreenPrimaryLight = Color(0xFF4CAF50)
+// ── 主色 ──
+val BluePrimary = Color(0xFF4285F4)
+val BluePrimaryDark = Color(0xFF3367D6)
 
-// 辅色 - 暖橙（烹饪温度）
-val OrangeAccent = Color(0xFFFF8F00)
-val OrangeAccentLight = Color(0xFFFFB74D)
+// ── 次色（操作成功、状态指示） ──
+val GreenSecondary = Color(0xFF34A853)
 
-// 背景 - 暖白（厨房温馨感）
-val WarmWhite = Color(0xFFFFF8F0)
-val WarmWhiteDark = Color(0xFFF5EDE0)
+// ── 警告色 ──
+val YellowWarning = Color(0xFFFBBC05)
 
-// 功能色
-val ExpiredRed = Color(0xFFD32F2F)
-val ExpiringOrange = Color(0xFFFF6F00)
-val FreshGreen = Color(0xFF388E3C)
+// ── 错误色 ──
+val RedError = Color(0xFFEA4335)
 
-// 文字色
-val TextPrimary = Color(0xFF1B1B1B)
-val TextSecondary = Color(0xFF616161)
+// ── 背景 ──
+val WhiteBackground = Color(0xFFFFFFFF)
+
+// ── 分割线 ──
+val GrayDivider = Color(0xFFE0E0E0)
+
+// ── 文字 ──
+val TextPrimary = Color(0xFF202124)
+val TextSecondary = Color(0xFF5F6368)
 val TextOnPrimary = Color(0xFFFFFFFF)
 
-// 暗色主题色
-val DarkBackground = Color(0xFF121212)
-val DarkSurface = Color(0xFF1E1E1E)
-val DarkGreenPrimary = Color(0xFF66BB6A)
-val DarkOrangeAccent = Color(0xFFFFAB40)
+// ── 暗色主题 ──
+val DarkBackground = Color(0xFF1A1A2E)
+val DarkSurface = Color(0xFF16213E)
+val DarkCard = Color(0xFF1F2A47)
+val DarkBluePrimary = Color(0xFF8AB4F8)
+val DarkTextPrimary = Color(0xFFE8EAED)
+val DarkTextSecondary = Color(0xFF9AA0A6)

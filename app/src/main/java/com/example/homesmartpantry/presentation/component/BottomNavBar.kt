@@ -22,7 +22,7 @@ data class BottomNavItem(
 )
 
 val bottomNavItems = listOf(
-    BottomNavItem("食材", Icons.Default.Kitchen, NavRoutes.HOME),
+    BottomNavItem("Home", Icons.Default.Kitchen, NavRoutes.HOME),
     BottomNavItem("菜谱", Icons.Default.MenuBook, NavRoutes.RECIPES),
     BottomNavItem("设置", Icons.Default.Settings, NavRoutes.SETTINGS)
 )
