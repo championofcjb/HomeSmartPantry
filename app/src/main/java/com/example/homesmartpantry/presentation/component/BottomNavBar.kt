@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Kitchen
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -24,6 +25,7 @@ data class BottomNavItem(
 val bottomNavItems = listOf(
     BottomNavItem("Home", Icons.Default.Kitchen, NavRoutes.HOME),
     BottomNavItem("菜谱", Icons.Default.MenuBook, NavRoutes.RECIPES),
+    BottomNavItem("今日做菜", Icons.Default.Restaurant, NavRoutes.TODAY_COOK),
     BottomNavItem("设置", Icons.Default.Settings, NavRoutes.SETTINGS)
 )
 

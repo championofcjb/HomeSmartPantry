@@ -4,8 +4,8 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 
 @Entity(
-    tableName = "recipe_ingredients",
-    primaryKeys = ["recipeId", "ingredientName"],
+    tableName = "recipe_tags",
+    primaryKeys = ["recipeId", "tag"],
     foreignKeys = [
         ForeignKey(
             entity = RecipeEntity::class,
@@ -15,9 +15,7 @@ import androidx.room.ForeignKey
         )
     ]
 )
-data class RecipeIngredientEntity(
+data class RecipeTagEntity(
     val recipeId: Long,
-    val ingredientName: String,  // 食材名称（自由文本，不依赖库存表）
-    val quantity: String,        // 用量描述，如 "2", "适量"
-    val unit: String             // 单位，如 "个", "g", "勺"
+    val tag: String
 )

@@ -2,10 +2,11 @@ package com.example.homesmartpantry.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 
 @Entity(
-    tableName = "recipe_ingredients",
-    primaryKeys = ["recipeId", "ingredientName"],
+    tableName = "today_cook_list",
+    primaryKeys = ["recipeId"],
     foreignKeys = [
         ForeignKey(
             entity = RecipeEntity::class,
@@ -13,11 +14,10 @@ import androidx.room.ForeignKey
             childColumns = ["recipeId"],
             onDelete = ForeignKey.CASCADE
         )
-    ]
+    ],
+    indices = [Index("recipeId")]
 )
-data class RecipeIngredientEntity(
+data class TodayCookEntity(
     val recipeId: Long,
-    val ingredientName: String,  // 食材名称（自由文本，不依赖库存表）
-    val quantity: String,        // 用量描述，如 "2", "适量"
-    val unit: String             // 单位，如 "个", "g", "勺"
+    val addedDate: Long = System.currentTimeMillis()
 )

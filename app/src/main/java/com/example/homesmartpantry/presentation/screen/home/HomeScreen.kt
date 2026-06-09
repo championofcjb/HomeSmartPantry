@@ -24,7 +24,10 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -61,6 +64,8 @@ import java.util.Locale
 fun HomeScreen(
     viewModel: HomeViewModel,
     onAddClick: () -> Unit,
+    onRecipesClick: () -> Unit = {},
+    onShoppingListClick: () -> Unit = {},
     onSelectionModeChanged: (Boolean) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -116,27 +121,91 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(MaterialTheme.colorScheme.primary)
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                    .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)
             ) {
                 Text(
                     text = "HomeSmartPantry",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.align(Alignment.CenterStart)
                 )
+                IconButton(
+                    onClick = onShoppingListClick,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    BadgedBox(badge = {
+                        if (uiState.shoppingCount > 0) {
+                            Badge { Text("${uiState.shoppingCount}", style = MaterialTheme.typography.labelSmall) }
+                        }
+                    }) {
+                        Icon(
+                            Icons.Default.ShoppingCart,
+                            contentDescription = "采购清单",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+            }
+        }
+
+        // Today's recommendation card
+        if (!isSelectionMode && (uiState.cookable.fullCount > 0 || uiState.cookable.partialCount > 0)) {
+            Card(
+                onClick = onRecipesClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                ),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("🍳", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        val sb = StringBuilder()
+                        if (uiState.cookable.fullCount > 0) sb.append("今天可以做 ${uiState.cookable.fullCount} 道菜")
+                        if (uiState.cookable.partialCount > 0) {
+                            if (sb.isNotEmpty()) sb.append(" · ")
+                            sb.append("部分可做 ${uiState.cookable.partialCount} 道")
+                        }
+                        Text(text = sb.toString(), style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        if (uiState.cookable.topRecipes.isNotEmpty()) {
+                            Text(text = uiState.cookable.topRecipes.joinToString("、"),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                        }
+                    }
+                    Icon(Icons.Default.Add, contentDescription = "查看菜谱",
+                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                }
             }
         }
 
         // Tab state (hoisted to composable level)
         val tabTitles = listOf("全部", "食材", "调味料", "主食粮油")
         var selectedTab by remember { mutableStateOf(0) }
+        var searchQuery by remember { mutableStateOf("") }
 
         // Search bar
         if (!isSelectionMode) {
             OutlinedTextField(
-                value = "",
-                onValueChange = {},
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
                 placeholder = { Text("搜索食材...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "搜索") },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "清除")
+                        }
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -170,8 +239,8 @@ fun HomeScreen(
             }
         }
 
-        // Filtered inventory (re-computed when tab changes)
-        val filteredInventory = if (isSelectionMode) {
+        // Filtered inventory (re-computed when tab or search changes)
+        val filteredByTab = if (isSelectionMode) {
             uiState.inventory
         } else when (selectedTab) {
             0 -> uiState.inventory
@@ -180,6 +249,8 @@ fun HomeScreen(
             3 -> uiState.inventory.filter { it.category == "主食粮油" }
             else -> uiState.inventory
         }
+        val filteredInventory = if (searchQuery.isBlank()) filteredByTab
+        else filteredByTab.filter { it.ingredientName.contains(searchQuery, ignoreCase = true) }
 
         // Content — always visible
         when {
@@ -399,12 +470,11 @@ fun InventoryCard(
         }
     }
 
-    // Quantity edit dialog
+    // Edit item dialog
     if (showQuantityDialog && !isSelectionMode) {
-        QuantityEditDialog(
-            currentQuantity = item.quantity,
-            unit = item.unit,
-            onConfirm = { newQty ->
+        ItemEditDialog(
+            item = item,
+            onConfirm = { newQty, newLoc, newPrice ->
                 onUpdateQuantity(newQty)
                 showQuantityDialog = false
             },
@@ -414,50 +484,56 @@ fun InventoryCard(
 }
 
 @Composable
-private fun QuantityEditDialog(
-    currentQuantity: Double,
-    unit: String,
-    onConfirm: (Double) -> Unit,
+private fun ItemEditDialog(
+    item: InventoryItem,
+    onConfirm: (Double, String, Double?) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var input by remember { mutableStateOf(formatQuantity(currentQuantity)) }
+    var qtyInput by remember { mutableStateOf(formatQuantity(item.quantity)) }
+    var loc by remember { mutableStateOf(item.storageLocation) }
+    var priceInput by remember { mutableStateOf(item.price?.let { formatQuantity(it) } ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("修改数量") },
+        title = { Text("编辑 ${item.ingredientName}") },
         text = {
-            OutlinedTextField(
-                value = input,
-                onValueChange = { newVal ->
-                    if (newVal.isEmpty() || newVal.matches(Regex("^\\d*\\.?\\d*$"))) {
-                        input = newVal
-                    }
-                },
-                label = { Text("数量") },
-                suffix = { Text(unit) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = qtyInput,
+                    onValueChange = { if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) qtyInput = it },
+                    label = { Text("数量") },
+                    suffix = { Text(item.unit) },
+                    singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = loc,
+                    onValueChange = { loc = it },
+                    label = { Text("存放位置") },
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = priceInput,
+                    onValueChange = { if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) priceInput = it },
+                    label = { Text("价格") },
+                    prefix = { Text("¥") },
+                    singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    val qty = input.toDoubleOrNull()
+                    val qty = qtyInput.toDoubleOrNull()
                     if (qty != null && qty >= 0) {
-                        onConfirm(qty)
+                        onConfirm(qty, loc, priceInput.toDoubleOrNull())
                     }
                 },
-                enabled = input.toDoubleOrNull() != null
-            ) {
-                Text("确定")
-            }
+                enabled = qtyInput.toDoubleOrNull() != null
+            ) { Text("保存") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
     )
 }
 

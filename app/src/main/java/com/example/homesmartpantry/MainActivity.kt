@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
         val app = application as HomeSmartPantryApp
         val homeViewModel = app.createHomeViewModel()
         val addIngredientViewModel = app.createAddIngredientViewModel()
+        val recipeViewModel = app.createRecipeViewModel()
 
         enableEdgeToEdge()
         setContent {
@@ -59,18 +60,19 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     floatingActionButton = {
-                        if (currentRoute == NavRoutes.HOME && !isSelectionMode) {
-                            FloatingActionButton(
-                                onClick = {
-                                    navController.navigate(NavRoutes.ADD_INGREDIENT)
-                                },
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            ) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = "添加食材"
-                                )
+                        if (!isSelectionMode) {
+                            when (currentRoute) {
+                                NavRoutes.HOME -> FloatingActionButton(
+                                    onClick = { navController.navigate(NavRoutes.ADD_INGREDIENT) },
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ) { Icon(Icons.Default.Add, contentDescription = "添加食材") }
+
+                                NavRoutes.RECIPES -> FloatingActionButton(
+                                    onClick = { navController.navigate(NavRoutes.ADD_RECIPE) },
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ) { Icon(Icons.Default.Add, contentDescription = "添加菜谱") }
                             }
                         }
                     }
@@ -79,6 +81,8 @@ class MainActivity : ComponentActivity() {
                         navController = navController,
                         homeViewModel = homeViewModel,
                         addIngredientViewModel = addIngredientViewModel,
+                        recipeViewModel = recipeViewModel,
+                        repository = app.repository,
                         modifier = Modifier.padding(innerPadding),
                         onSelectionModeChanged = { isSelectionMode = it }
                     )

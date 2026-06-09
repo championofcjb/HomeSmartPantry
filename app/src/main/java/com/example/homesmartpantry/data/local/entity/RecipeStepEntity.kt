@@ -2,10 +2,10 @@ package com.example.homesmartpantry.data.local.entity
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "recipe_ingredients",
-    primaryKeys = ["recipeId", "ingredientName"],
+    tableName = "recipe_steps",
     foreignKeys = [
         ForeignKey(
             entity = RecipeEntity::class,
@@ -15,9 +15,11 @@ import androidx.room.ForeignKey
         )
     ]
 )
-data class RecipeIngredientEntity(
+data class RecipeStepEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
     val recipeId: Long,
-    val ingredientName: String,  // 食材名称（自由文本，不依赖库存表）
-    val quantity: String,        // 用量描述，如 "2", "适量"
-    val unit: String             // 单位，如 "个", "g", "勺"
+    val stepNumber: Int,
+    val description: String,
+    val imageUri: String? = null
 )
