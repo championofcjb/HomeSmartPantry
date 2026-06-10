@@ -18,13 +18,16 @@ data class CookableInfo(
     val topRecipes: List<String> = emptyList()
 )
 
+enum class SortOption { NAME, EXPIRY, CATEGORY, QUANTITY }
+
 data class HomeUiState(
     val inventory: List<InventoryItem> = emptyList(),
     val isLoading: Boolean = true,
     val cookable: CookableInfo = CookableInfo(),
     val shoppingCount: Int = 0,
     val expiredCount: Int = 0,
-    val expiringSoonCount: Int = 0
+    val expiringSoonCount: Int = 0,
+    val sortOption: SortOption = SortOption.NAME
 )
 
 class HomeViewModel(
@@ -58,8 +61,9 @@ class HomeViewModel(
                 }
                 val expired = items.count { it.isExpired }
                 val expiringSoon = items.count { it.isExpiringSoon && !it.isExpired }
-                _uiState.value = HomeUiState(
-                    inventory = items, isLoading = false, cookable = cookable,
+                val sorted = sortItems(items, _uiState.value.sortOption)
+                _uiState.value = _uiState.value.copy(
+                    inventory = sorted, isLoading = false, cookable = cookable,
                     shoppingCount = count, expiredCount = expired, expiringSoonCount = expiringSoon
                 )
             }
@@ -89,6 +93,20 @@ class HomeViewModel(
                 price = price
             )
             if (entity != null) repository.updateInventoryEntity(entity)
+        }
+    }
+
+    fun setSortOption(option: SortOption) {
+        _uiState.value = _uiState.value.copy(sortOption = option)
+        _uiState.value = _uiState.value.copy(inventory = sortItems(_uiState.value.inventory, option))
+    }
+
+    private fun sortItems(items: List<InventoryItem>, option: SortOption): List<InventoryItem> {
+        return when (option) {
+            SortOption.NAME -> items.sortedBy { it.ingredientName.lowercase() }
+            SortOption.EXPIRY -> items.sortedBy { it.expireDate ?: Long.MAX_VALUE }
+            SortOption.CATEGORY -> items.sortedBy { it.category }
+            SortOption.QUANTITY -> items.sortedByDescending { it.quantity }
         }
     }
 }

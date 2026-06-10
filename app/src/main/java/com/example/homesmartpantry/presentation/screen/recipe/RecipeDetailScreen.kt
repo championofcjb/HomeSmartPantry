@@ -1,6 +1,8 @@
 package com.example.homesmartpantry.presentation.screen.recipe
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -166,15 +168,32 @@ fun RecipeDetailScreen(
             modifier = Modifier.fillMaxSize().padding(padding),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            // Image banner
+            // Image banner (gradient based on category)
             item {
+                val gradient = when (recipe.category) {
+                    "川菜" -> Brush.horizontalGradient(listOf(Color(0xFFDC3545), Color(0xFFFF6B6B)))
+                    "粤菜" -> Brush.horizontalGradient(listOf(Color(0xFF28A745), Color(0xFF69DB7C)))
+                    "烘焙" -> Brush.horizontalGradient(listOf(Color(0xFFE67E22), Color(0xFFF0C27A)))
+                    "汤羹" -> Brush.horizontalGradient(listOf(Color(0xFF17A2B8), Color(0xFF67D5E2)))
+                    "凉菜" -> Brush.horizontalGradient(listOf(Color(0xFF6610F2), Color(0xFF9D6FFA)))
+                    "主食" -> Brush.horizontalGradient(listOf(Color(0xFF6F42C1), Color(0xFFA379E0)))
+                    else -> Brush.horizontalGradient(listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.tertiary
+                    ))
+                }
                 Box(
                     modifier = Modifier.fillMaxWidth().height(200.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                        .background(gradient),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("📸 菜谱图片", style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("🍳", style = MaterialTheme.typography.displayLarge)
+                        Spacer(Modifier.height(8.dp))
+                        Text(recipe.category.ifBlank { "家常菜" },
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White.copy(alpha = 0.9f))
+                    }
                 }
             }
 
@@ -203,10 +222,13 @@ fun RecipeDetailScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                             repeat(5) { i ->
                                 Icon(
-                                    if (i < recipe.rating.toInt()) Icons.Default.Star
-                                    else Icons.Default.StarBorder,
-                                    contentDescription = null, tint = Color(0xFFFBBC05),
-                                    modifier = Modifier.size(20.dp)
+                                    imageVector = if (i < recipe.rating.toInt()) Icons.Default.Star
+                                                  else Icons.Default.StarBorder,
+                                    contentDescription = "评分 ${i + 1}",
+                                    tint = Color(0xFFFBBC05),
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clickable { viewModel.setRating((i + 1).toFloat()) }
                                 )
                             }
                         }

@@ -56,7 +56,10 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     bottomBar = {
                         if (!isSelectionMode) {
-                            BottomNavBar(navController = navController)
+                            BottomNavBar(
+                                navController = navController,
+                                todayCookCount = recipeViewModel.todayCookCount
+                            )
                         }
                     },
                     floatingActionButton = {

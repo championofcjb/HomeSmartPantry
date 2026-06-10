@@ -231,6 +231,7 @@ class IngredientRepository(
     suspend fun deleteRecipe(id: Long) { recipeDao.deleteById(id) }
 
     suspend fun setFavorite(id: Long, favorite: Boolean) { recipeDao.setFavorite(id, favorite) }
+    suspend fun setRating(id: Long, rating: Float) { recipeDao.setRating(id, rating) }
 
     fun getRecipeIngredients(recipeId: Long): Flow<List<com.example.homesmartpantry.domain.model.RecipeIngredient>> {
         return recipeDao.getRecipeIngredients(recipeId).map { entities ->

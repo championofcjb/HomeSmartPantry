@@ -232,6 +232,16 @@ class RecipeViewModel(
         }
     }
 
+    fun setRating(rating: Float) {
+        val recipe = _detailState.value.recipe ?: return
+        viewModelScope.launch {
+            repository.setRating(recipe.id, rating)
+            _detailState.value = _detailState.value.copy(
+                recipe = recipe.copy(rating = rating)
+            )
+        }
+    }
+
     fun addMissingToShoppingList() {
         val missing = _detailState.value.ingredients.filter {
             it.status != IngredientStockStatus.SUFFICIENT

@@ -102,6 +102,35 @@ fun RecipeListScreen(
             }
         }
 
+        // Category filter chips
+        var selectedCategory by remember { mutableStateOf("") }
+        val allCategories = uiState.recipes.map { it.recipe.category }.distinct().filter { it.isNotBlank() }.sorted()
+        if (allCategories.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                FilterChip(
+                    selected = selectedCategory.isEmpty(),
+                    onClick = { selectedCategory = "" },
+                    label = { Text("全部", style = MaterialTheme.typography.labelSmall) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                )
+                allCategories.take(8).forEach { cat ->
+                    FilterChip(
+                        selected = selectedCategory == cat,
+                        onClick = { selectedCategory = if (selectedCategory == cat) "" else cat },
+                        label = { Text(cat, style = MaterialTheme.typography.labelSmall) }
+                    )
+                }
+            }
+        }
+
         // Search bar
         var searchQuery by remember { mutableStateOf("") }
         OutlinedTextField(
@@ -123,8 +152,11 @@ fun RecipeListScreen(
             shape = MaterialTheme.shapes.medium
         )
 
-        val filteredRecipes = if (searchQuery.isBlank()) uiState.recipes
-        else uiState.recipes.filter {
+        val categoryFiltered = if (selectedCategory.isBlank()) uiState.recipes
+        else uiState.recipes.filter { it.recipe.category == selectedCategory }
+
+        val filteredRecipes = if (searchQuery.isBlank()) categoryFiltered
+        else categoryFiltered.filter {
             val q = searchQuery.lowercase()
             it.recipe.name.contains(q, ignoreCase = true) ||
             it.recipe.description.contains(q, ignoreCase = true) ||

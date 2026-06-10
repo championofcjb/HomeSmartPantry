@@ -34,6 +34,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -101,6 +103,11 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
+                    TextButton(onClick = {
+                        selectedIds = uiState.inventory.filter { it.isExpired }.map { it.id }.toSet()
+                    }) {
+                        Text("过期", color = MaterialTheme.colorScheme.error)
+                    }
                     IconButton(onClick = {
                         viewModel.deleteItems(selectedIds.toList())
                         selectedIds = emptySet()
@@ -158,6 +165,12 @@ fun HomeScreen(
                 MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
             }
             Card(
+                onClick = {
+                    selectedIds = uiState.inventory.filter { it.isExpired }.map { it.id }.toSet()
+                    if (selectedIds.isEmpty()) {
+                        selectedIds = uiState.inventory.filter { it.isExpiringSoon }.map { it.id }.toSet()
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -231,6 +244,22 @@ fun HomeScreen(
             }
         }
 
+        // Inventory stats row
+        if (!isSelectionMode && uiState.inventory.isNotEmpty()) {
+            val categoryCount = uiState.inventory.map { it.category }.distinct().size
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                StatItem(value = "${uiState.inventory.size}", label = "总物品")
+                StatItem(value = "$categoryCount", label = "分类")
+                StatItem(value = "${uiState.inventory.count { !it.isExpired && !it.isExpiringSoon }}", label = "正常")
+                StatItem(value = "${uiState.expiredCount + uiState.expiringSoonCount}", label = "需处理")
+            }
+        }
+
         // Tab state (hoisted to composable level)
         val tabTitles = listOf("全部", "食材", "调味料", "主食粮油")
         var selectedTab by remember { mutableStateOf(0) }
@@ -278,6 +307,34 @@ fun HomeScreen(
                                     MaterialTheme.typography.bodyMedium
                             )
                         }
+                    )
+                }
+            }
+        }
+
+        // Sort chips
+        if (!isSelectionMode) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                val sortOptions = listOf(
+                    com.example.homesmartpantry.presentation.screen.home.SortOption.NAME to "名称",
+                    com.example.homesmartpantry.presentation.screen.home.SortOption.EXPIRY to "过期",
+                    com.example.homesmartpantry.presentation.screen.home.SortOption.CATEGORY to "分类",
+                    com.example.homesmartpantry.presentation.screen.home.SortOption.QUANTITY to "数量"
+                )
+                sortOptions.forEach { (option, label) ->
+                    FilterChip(
+                        selected = uiState.sortOption == option,
+                        onClick = { viewModel.setSortOption(option) },
+                        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
                     )
                 }
             }
@@ -411,6 +468,15 @@ fun InventoryCard(
                     checked = isSelected,
                     onCheckedChange = { onClick() },
                     modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+
+            // Category emoji icon
+            if (!isSelectionMode) {
+                Text(
+                    text = categoryIcon(item.category),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(end = 12.dp)
                 )
             }
 
@@ -619,5 +685,36 @@ private fun formatQuantity(qty: Double): String {
         qty.toLong().toString()
     } else {
         String.format("%.1f", qty)
+    }
+}
+
+private fun categoryIcon(category: String): String = when {
+    category.contains("调味") || category.contains("料") -> "🧂"
+    category.contains("主食") || category.contains("米") || category.contains("面") -> "🍚"
+    category.contains("蔬菜") || category.contains("菜") -> "🥬"
+    category.contains("水果") || category.contains("果") -> "🍎"
+    category.contains("肉") || category.contains("禽") -> "🥩"
+    category.contains("海鲜") || category.contains("鱼") || category.contains("虾") -> "🦐"
+    category.contains("蛋") || category.contains("奶") -> "🥛"
+    category.contains("冷冻") || category.contains("冰") -> "🧊"
+    category.contains("零食") || category.contains("小吃") -> "🍪"
+    category.contains("饮品") || category.contains("饮料") || category.contains("酒") -> "🥤"
+    category.contains("干货") || category.contains("干") -> "🥜"
+    else -> "📦"
+}
+
+@Composable
+private fun StatItem(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
