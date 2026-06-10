@@ -54,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -441,13 +442,25 @@ fun InventoryCard(
                 )
             }
 
-            // Category emoji icon
+            // Category emoji or image icon
             if (!isSelectionMode) {
-                Text(
-                    text = categoryIcon(item.category),
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(end = 12.dp)
-                )
+                if (item.imageUri != null) {
+                    coil.compose.AsyncImage(
+                        model = item.imageUri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(Modifier.width(12.dp))
+                } else {
+                    Text(
+                        text = categoryIcon(item.category),
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
+                }
             }
 
             Column(modifier = Modifier.weight(1f)) {

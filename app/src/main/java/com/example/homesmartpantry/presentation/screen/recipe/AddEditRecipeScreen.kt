@@ -49,10 +49,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.example.homesmartpantry.domain.model.RecipeIngredient
 import com.example.homesmartpantry.domain.model.RecipeStep
 import kotlinx.coroutines.launch
@@ -83,7 +91,11 @@ fun AddEditRecipeScreen(
     val steps = remember { mutableStateListOf<String>() }
     val tags = remember { mutableStateListOf<String>() }
     var newTag by remember { mutableStateOf("") }
+    var imageUri by remember { mutableStateOf<String?>(null) }
     var initialized by remember { mutableStateOf(false) }
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri -> imageUri = uri?.toString() }
 
     var showAddIngredient by remember { mutableStateOf(false) }
     var newIngName by remember { mutableStateOf("") }
@@ -134,6 +146,7 @@ fun AddEditRecipeScreen(
         isSaving = true
         viewModel.saveRecipe(
             id = editRecipeId, name = name.trim(), description = description.trim(),
+            imageUri = imageUri,
             category = recipeCategory, difficulty = difficulty, cookTime = cookTime,
             servings = servings, calories = calories, protein = protein, fat = fat, notes = notes.trim(),
             ingredients = ingredients.map { RecipeIngredient(0, it.name, it.quantity.ifBlank { "适量" }, it.unit) },
@@ -170,6 +183,35 @@ fun AddEditRecipeScreen(
                 OutlinedTextField(value = name, onValueChange = { name = it },
                     label = { Text("菜谱名称") }, placeholder = { Text("例如: 番茄炒蛋") },
                     modifier = Modifier.fillMaxWidth(), singleLine = true)
+            }
+            // Image picker
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { imagePickerLauncher.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (imageUri != null) {
+                        AsyncImage(
+                            model = imageUri,
+                            contentDescription = "菜谱图片",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("📸", style = MaterialTheme.typography.displayMedium)
+                            Spacer(Modifier.height(4.dp))
+                            Text("点击选择菜谱图片",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
             }
             item { ChipSelector("分类", categories, recipeCategory) { recipeCategory = it } }
             item { ChipSelector("难度", difficulties, difficulty) { difficulty = it } }

@@ -19,6 +19,7 @@ data class AddIngredientUiState(
     val shelfLifeDays: String = "",
     val storageLocation: String = "冰箱冷藏",
     val price: String = "",
+    val imageUri: String? = null,
     val searchResults: List<Ingredient> = emptyList(),
     val isSearching: Boolean = false,
     val isSaving: Boolean = false,
@@ -121,6 +122,10 @@ class AddIngredientViewModel(
         }
     }
 
+    fun updateImageUri(uri: String?) {
+        _uiState.value = _uiState.value.copy(imageUri = uri)
+    }
+
     fun save() {
         val state = _uiState.value
 
@@ -149,9 +154,12 @@ class AddIngredientViewModel(
         viewModelScope.launch {
             try {
                 val ingredientId = if (state.selectedIngredient != null) {
+                    if (state.imageUri != null && state.imageUri != (state.selectedIngredient.imageUri ?: "")) {
+                        repository.updateIngredient(state.selectedIngredient.id, state.name.trim(), state.unit.trim(), state.category)
+                    }
                     state.selectedIngredient.id
                 } else {
-                    repository.addIngredient(state.name.trim(), state.unit.trim(), state.category)
+                    repository.addIngredient(state.name.trim(), state.unit.trim(), state.category, state.imageUri)
                 }
 
                 repository.addInventory(

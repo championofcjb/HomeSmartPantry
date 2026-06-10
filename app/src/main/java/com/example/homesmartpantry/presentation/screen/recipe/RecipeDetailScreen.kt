@@ -168,7 +168,7 @@ fun RecipeDetailScreen(
             modifier = Modifier.fillMaxSize().padding(padding),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            // Image banner (gradient based on category)
+            // Image banner
             item {
                 val gradient = when (recipe.category) {
                     "川菜" -> Brush.horizontalGradient(listOf(Color(0xFFDC3545), Color(0xFFFF6B6B)))
@@ -183,16 +183,29 @@ fun RecipeDetailScreen(
                     ))
                 }
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(200.dp)
-                        .background(gradient),
+                    modifier = Modifier.fillMaxWidth().height(200.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("🍳", style = MaterialTheme.typography.displayLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Text(recipe.category.ifBlank { "家常菜" },
-                            style = MaterialTheme.typography.titleLarge,
-                            color = Color.White.copy(alpha = 0.9f))
+                    if (recipe.imageUri != null) {
+                        coil.compose.AsyncImage(
+                            model = recipe.imageUri,
+                            contentDescription = "菜谱图片",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(gradient),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("🍳", style = MaterialTheme.typography.displayLarge)
+                                Spacer(Modifier.height(8.dp))
+                                Text(recipe.category.ifBlank { "家常菜" },
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = Color.White.copy(alpha = 0.9f))
+                            }
+                        }
                     }
                 }
             }

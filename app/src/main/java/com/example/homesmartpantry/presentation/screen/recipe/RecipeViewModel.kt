@@ -199,6 +199,7 @@ class RecipeViewModel(
 
     fun saveRecipe(
         id: Long?, name: String, description: String,
+        imageUri: String? = null,
         category: String = "家常菜", difficulty: String = "普通", cookTime: String = "30分钟",
         servings: String = "2人份", calories: String = "", protein: String = "", fat: String = "",
         notes: String = "",
@@ -207,7 +208,7 @@ class RecipeViewModel(
         onDone: () -> Unit
     ) {
         viewModelScope.launch {
-            repository.saveRecipe(id, name, description, null, category, difficulty, cookTime,
+            repository.saveRecipe(id, name, description, imageUri, category, difficulty, cookTime,
                 servings, calories, protein, fat, notes, ingredients, steps, tags)
             onDone()
         }
