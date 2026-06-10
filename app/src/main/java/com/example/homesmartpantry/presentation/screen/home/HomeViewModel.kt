@@ -22,7 +22,9 @@ data class HomeUiState(
     val inventory: List<InventoryItem> = emptyList(),
     val isLoading: Boolean = true,
     val cookable: CookableInfo = CookableInfo(),
-    val shoppingCount: Int = 0
+    val shoppingCount: Int = 0,
+    val expiredCount: Int = 0,
+    val expiringSoonCount: Int = 0
 )
 
 class HomeViewModel(
@@ -54,7 +56,12 @@ class HomeViewModel(
                     }
                     CookableInfo(full, partial, topNames)
                 }
-                _uiState.value = HomeUiState(inventory = items, isLoading = false, cookable = cookable, shoppingCount = count)
+                val expired = items.count { it.isExpired }
+                val expiringSoon = items.count { it.isExpiringSoon && !it.isExpired }
+                _uiState.value = HomeUiState(
+                    inventory = items, isLoading = false, cookable = cookable,
+                    shoppingCount = count, expiredCount = expired, expiringSoonCount = expiringSoon
+                )
             }
         }
     }

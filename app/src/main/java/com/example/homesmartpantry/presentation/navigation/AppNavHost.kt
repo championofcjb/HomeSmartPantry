@@ -120,13 +120,26 @@ fun AppNavHost(
                 onMarkPurchased = { id ->
                     CoroutineScope(Dispatchers.IO).launch { repository.markPurchased(id) }
                 },
+                onMarkUnpurchased = { id ->
+                    CoroutineScope(Dispatchers.IO).launch { repository.markUnpurchased(id) }
+                },
                 onDelete = { id ->
                     CoroutineScope(Dispatchers.IO).launch { repository.deleteShoppingItem(id) }
                 },
                 onClearPurchased = {
                     CoroutineScope(Dispatchers.IO).launch { repository.clearPurchased() }
                 },
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onAddItem = { name, qty, unit ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        repository.addSingleShoppingItem(name, qty, unit)
+                    }
+                },
+                onUpdateItem = { id, name, qty, unit ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        repository.updateShoppingItem(id, name, qty, unit)
+                    }
+                }
             )
         }
 
@@ -134,7 +147,14 @@ fun AppNavHost(
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onShoppingListClick = { navController.navigate(NavRoutes.SHOPPING_LIST) },
-                onFavoritesClick = { navController.navigate(NavRoutes.FAVORITES) }
+                onFavoritesClick = { navController.navigate(NavRoutes.FAVORITES) },
+                onTodayCookClick = {
+                    navController.navigate(NavRoutes.TODAY_COOK) {
+                        popUpTo(NavRoutes.HOME) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
             )
         }
 

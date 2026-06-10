@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -149,6 +150,48 @@ fun HomeScreen(
             }
         }
 
+        // Expiry warning banner
+        if (!isSelectionMode && (uiState.expiredCount > 0 || uiState.expiringSoonCount > 0)) {
+            val (bgColor, textColor) = if (uiState.expiredCount > 0) {
+                MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+            } else {
+                MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+            }
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = bgColor),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Warning, contentDescription = null,
+                        tint = if (uiState.expiredCount > 0) MaterialTheme.colorScheme.error
+                               else MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        val message = buildString {
+                            if (uiState.expiredCount > 0) {
+                                append("${uiState.expiredCount} 样食材已过期")
+                            }
+                            if (uiState.expiringSoonCount > 0) {
+                                if (isNotEmpty()) append("，")
+                                append("${uiState.expiringSoonCount} 样即将过期")
+                            }
+                        }
+                        Text(text = message, style = MaterialTheme.typography.titleSmall,
+                            color = textColor)
+                        Text(text = "请及时处理", style = MaterialTheme.typography.bodySmall,
+                            color = textColor.copy(alpha = 0.7f))
+                    }
+                }
+            }
+        }
+
         // Today's recommendation card
         if (!isSelectionMode && (uiState.cookable.fullCount > 0 || uiState.cookable.partialCount > 0)) {
             Card(
@@ -251,7 +294,12 @@ fun HomeScreen(
             else -> uiState.inventory
         }
         val filteredInventory = if (searchQuery.isBlank()) filteredByTab
-        else filteredByTab.filter { it.ingredientName.contains(searchQuery, ignoreCase = true) }
+        else filteredByTab.filter {
+            val q = searchQuery.lowercase()
+            it.ingredientName.contains(q, ignoreCase = true) ||
+            it.storageLocation.contains(q, ignoreCase = true) ||
+            it.category.contains(q, ignoreCase = true)
+        }
 
         // Content — always visible
         when {
@@ -467,6 +515,18 @@ fun InventoryCard(
                         text = "过期: $dateStr",
                         style = MaterialTheme.typography.bodyMedium,
                         color = statusColor
+                    )
+                }
+
+                // Purchase date
+                if (item.purchaseDate != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    val dateStr = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
+                        .format(Date(item.purchaseDate))
+                    Text(
+                        text = "购买: $dateStr",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

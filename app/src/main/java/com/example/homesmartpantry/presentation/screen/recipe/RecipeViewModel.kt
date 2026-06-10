@@ -123,8 +123,13 @@ class RecipeViewModel(
         val sorted = recipes.sortedBy { when (it.availability) {
             Availability.FULL -> 0; Availability.PARTIAL -> 1; Availability.NONE -> 2
         } }
-        return when (tab) { 0 -> sorted; 1 -> sorted.filter { it.availability == Availability.FULL }
-            2 -> sorted.filter { it.availability == Availability.PARTIAL }; else -> sorted }
+        return when (tab) {
+            0 -> sorted
+            1 -> sorted.filter { it.availability == Availability.FULL }
+            2 -> sorted.filter { it.availability == Availability.PARTIAL }
+            3 -> sorted.filter { it.recipe.isFavorite }
+            else -> sorted
+        }
     }
 
     fun setTab(tab: Int) {

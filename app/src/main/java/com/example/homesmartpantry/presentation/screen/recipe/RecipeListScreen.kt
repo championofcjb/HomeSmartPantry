@@ -6,14 +6,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
@@ -79,7 +82,7 @@ fun RecipeListScreen(
         )
 
         // Filter chips
-        val tabs = listOf("全部", "可做", "部分可做")
+        val tabs = listOf("全部", "可做", "部分可做", "收藏")
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -121,7 +124,13 @@ fun RecipeListScreen(
         )
 
         val filteredRecipes = if (searchQuery.isBlank()) uiState.recipes
-        else uiState.recipes.filter { it.recipe.name.contains(searchQuery, ignoreCase = true) }
+        else uiState.recipes.filter {
+            val q = searchQuery.lowercase()
+            it.recipe.name.contains(q, ignoreCase = true) ||
+            it.recipe.description.contains(q, ignoreCase = true) ||
+            it.recipe.category.contains(q, ignoreCase = true) ||
+            it.missingIngredients.any { ing -> ing.contains(q, ignoreCase = true) }
+        }
 
         if (filteredRecipes.isEmpty()) {
             Box(
@@ -181,10 +190,24 @@ private fun RecipeCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = recipeWithStatus.recipe.name,
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = recipeWithStatus.recipe.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (recipeWithStatus.recipe.category.isNotBlank()) {
+                        Text(
+                            text = recipeWithStatus.recipe.category,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "食材: ${recipeWithStatus.matchCount}/${recipeWithStatus.totalCount}",
@@ -202,6 +225,14 @@ private fun RecipeCard(
                 }
             }
 
+            if (recipeWithStatus.recipe.isFavorite) {
+                Icon(
+                    Icons.Default.Favorite,
+                    contentDescription = "收藏",
+                    tint = Color(0xFFEA4335),
+                    modifier = Modifier.padding(end = 4.dp).size(18.dp)
+                )
+            }
             Icon(
                 imageVector = statusIcon,
                 contentDescription = null,

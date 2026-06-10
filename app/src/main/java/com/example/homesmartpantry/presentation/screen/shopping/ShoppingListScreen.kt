@@ -1,5 +1,7 @@
 package com.example.homesmartpantry.presentation.screen.shopping
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,15 +15,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,25 +42,30 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.homesmartpantry.data.local.entity.ShoppingItemEntity
-import com.example.homesmartpantry.data.repository.IngredientRepository
 import kotlinx.coroutines.flow.Flow
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ShoppingListScreen(
     shoppingItems: Flow<List<ShoppingItemEntity>>,
     onMarkPurchased: (Long) -> Unit,
+    onMarkUnpurchased: (Long) -> Unit = {},
     onDelete: (Long) -> Unit,
     onClearPurchased: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onAddItem: (String, String, String) -> Unit = { _, _, _ -> },
+    onUpdateItem: (Long, String, String, String) -> Unit = { _, _, _, _ -> }
 ) {
     val items by shoppingItems.collectAsState(initial = emptyList())
     val unpurchased = items.filter { !it.isPurchased }
     val purchased = items.filter { it.isPurchased }
+    var showAddDialog by remember { mutableStateOf(false) }
+    var editingItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -61,9 +73,7 @@ fun ShoppingListScreen(
                 title = { Text("采购清单") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回"
-                        )
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 },
                 actions = {
@@ -79,6 +89,15 @@ fun ShoppingListScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showAddDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "添加物品")
+            }
         }
     ) { padding ->
         if (items.isEmpty()) {
@@ -86,8 +105,13 @@ fun ShoppingListScreen(
                 Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("采购清单为空\n可从菜谱详情页添加", style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("采购清单为空", style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(4.dp))
+                    Text("点击右下角 + 手动添加\n或从菜谱详情页添加", style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                }
             }
         } else {
             LazyColumn(
@@ -105,8 +129,12 @@ fun ShoppingListScreen(
                 items(unpurchased, key = { it.id }) { item ->
                     ShoppingItemRow(
                         item = item,
-                        onToggle = { onMarkPurchased(item.id) },
-                        onDelete = { onDelete(item.id) }
+                        onToggle = {
+                            if (item.isPurchased) onMarkUnpurchased(item.id)
+                            else onMarkPurchased(item.id)
+                        },
+                        onDelete = { onDelete(item.id) },
+                        onEdit = { editingItem = item }
                     )
                 }
 
@@ -122,23 +150,60 @@ fun ShoppingListScreen(
                 items(purchased, key = { it.id }) { item ->
                     ShoppingItemRow(
                         item = item,
-                        onToggle = { onMarkPurchased(item.id) },
-                        onDelete = { onDelete(item.id) }
+                        onToggle = {
+                            if (item.isPurchased) onMarkUnpurchased(item.id)
+                            else onMarkPurchased(item.id)
+                        },
+                        onDelete = { onDelete(item.id) },
+                        onEdit = { editingItem = item }
                     )
                 }
+
+                item { Spacer(Modifier.height(72.dp)) }
             }
         }
     }
+
+    // Add dialog
+    if (showAddDialog) {
+        AddShoppingItemDialog(
+            onConfirm = { name, qty, unit ->
+                onAddItem(name, qty, unit)
+                showAddDialog = false
+            },
+            onDismiss = { showAddDialog = false }
+        )
+    }
+
+    // Edit dialog
+    editingItem?.let { item ->
+        EditShoppingItemDialog(
+            item = item,
+            onConfirm = { name, qty, unit ->
+                onUpdateItem(item.id, name, qty, unit)
+                editingItem = null
+            },
+            onDismiss = { editingItem = null }
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ShoppingItemRow(
     item: ShoppingItemEntity,
     onToggle: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .combinedClickable(
+                onClick = onToggle,
+                onLongClick = onEdit
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onToggle, modifier = Modifier.size(40.dp)) {
@@ -169,4 +234,111 @@ private fun ShoppingItemRow(
                 modifier = Modifier.size(20.dp))
         }
     }
+}
+
+@Composable
+private fun AddShoppingItemDialog(
+    onConfirm: (String, String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var quantity by remember { mutableStateOf("") }
+    var unit by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("添加采购物品") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("食材名称") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = quantity,
+                        onValueChange = { quantity = it },
+                        label = { Text("数量") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = unit,
+                        onValueChange = { unit = it },
+                        label = { Text("单位") },
+                        placeholder = { Text("个/克/袋") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(name.trim(), quantity.trim(), unit.trim()) },
+                enabled = name.isNotBlank()
+            ) { Text("添加") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
+}
+
+@Composable
+private fun EditShoppingItemDialog(
+    item: ShoppingItemEntity,
+    onConfirm: (String, String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(item.ingredientName) }
+    var quantity by remember { mutableStateOf(item.quantity) }
+    var unit by remember { mutableStateOf(item.unit) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("编辑采购物品") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("食材名称") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = quantity,
+                        onValueChange = { quantity = it },
+                        label = { Text("数量") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = unit,
+                        onValueChange = { unit = it },
+                        label = { Text("单位") },
+                        placeholder = { Text("个/克/袋") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(name.trim(), quantity.trim(), unit.trim()) },
+                enabled = name.isNotBlank()
+            ) { Text("保存") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
 }

@@ -35,4 +35,7 @@ interface ShoppingDao {
 
     @Query("SELECT COUNT(*) FROM shopping_list WHERE isPurchased = 0")
     fun getUnpurchasedCount(): Flow<Int>
+
+    @Query("UPDATE shopping_list SET ingredientName = :name, quantity = :quantity, unit = :unit WHERE id = :id")
+    suspend fun updateItem(id: Long, name: String, quantity: String, unit: String)
 }

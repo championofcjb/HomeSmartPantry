@@ -292,8 +292,15 @@ class IngredientRepository(
     }
 
     suspend fun markPurchased(id: Long) = shoppingDao.markPurchased(id)
+    suspend fun markUnpurchased(id: Long) = shoppingDao.markUnpurchased(id)
     suspend fun deleteShoppingItem(id: Long) = shoppingDao.deleteById(id)
     suspend fun clearPurchased() = shoppingDao.clearPurchased()
+    suspend fun addSingleShoppingItem(name: String, quantity: String, unit: String) {
+        shoppingDao.insert(ShoppingItemEntity(ingredientName = name, quantity = quantity, unit = unit))
+    }
+    suspend fun updateShoppingItem(id: Long, name: String, quantity: String, unit: String) {
+        shoppingDao.updateItem(id, name, quantity, unit)
+    }
 
     suspend fun getInventoryById(id: Long): com.example.homesmartpantry.data.local.entity.InventoryEntity? = inventoryDao.getById(id)
     suspend fun updateInventoryEntity(entity: com.example.homesmartpantry.data.local.entity.InventoryEntity) = inventoryDao.update(entity)

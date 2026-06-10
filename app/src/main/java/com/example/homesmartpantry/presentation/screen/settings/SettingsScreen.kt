@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,7 +37,8 @@ import androidx.compose.ui.unit.dp
 fun SettingsScreen(
     onBack: () -> Unit,
     onShoppingListClick: () -> Unit,
-    onFavoritesClick: () -> Unit = {}
+    onFavoritesClick: () -> Unit = {},
+    onTodayCookClick: () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -75,6 +77,15 @@ fun SettingsScreen(
                     title = "收藏菜谱",
                     subtitle = "查看和管理已收藏的菜谱",
                     onClick = onFavoritesClick
+                )
+            }
+
+            item {
+                SettingsCard(
+                    icon = Icons.Default.Restaurant,
+                    title = "今日做菜",
+                    subtitle = "查看今日计划制作的菜谱",
+                    onClick = onTodayCookClick
                 )
             }
 

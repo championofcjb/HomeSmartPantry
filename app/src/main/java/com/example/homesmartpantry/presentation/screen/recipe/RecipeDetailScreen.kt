@@ -189,6 +189,15 @@ fun RecipeDetailScreen(
                         InfoChip(recipe.difficulty)
                         InfoChip(recipe.servings)
                     }
+                    // Description
+                    if (recipe.description.isNotBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = recipe.description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
