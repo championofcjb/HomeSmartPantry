@@ -14,5 +14,6 @@ data class Recipe(
     val calories: String = "",
     val protein: String = "",
     val fat: String = "",
-    val notes: String = ""
+    val notes: String = "",
+    val createDate: Long = System.currentTimeMillis()
 )

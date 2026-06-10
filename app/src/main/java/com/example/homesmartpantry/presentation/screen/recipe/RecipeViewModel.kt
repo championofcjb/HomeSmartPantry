@@ -29,11 +29,14 @@ data class RecipeWithStatus(
     val missingIngredients: List<String>
 )
 
+enum class RecipeSortOption { NAME, RATING, NEWEST }
+
 data class RecipeUiState(
     val recipes: List<RecipeWithStatus> = emptyList(),
     val isSearching: Boolean = false,
     val searchQuery: String = "",
-    val selectedTab: Int = 0
+    val selectedTab: Int = 0,
+    val sortOption: RecipeSortOption = RecipeSortOption.NAME
 )
 
 // ── Detail state ──
@@ -70,29 +73,43 @@ class RecipeViewModel(
     val detailState: StateFlow<RecipeDetailState> = _detailState.asStateFlow()
 
     private var allInventory: List<InventoryItem> = emptyList()
+    private val _searchQuery = MutableStateFlow("")
 
     init {
         viewModelScope.launch {
             combine(
                 repository.getAllRecipes(),
-                repository.getAllInventory()
-            ) { recipes, inventory ->
+                repository.getAllInventory(),
+                _searchQuery
+            ) { recipes, inventory, query ->
                 allInventory = inventory
-                Pair(recipes, inventory)
-            }.collect { (recipes, inventory) ->
+                Triple(recipes, inventory, query)
+            }.collect { (recipes, inventory, query) ->
+                val filtered = if (query.isBlank()) recipes
+                else recipes.filter {
+                    val q = query.lowercase()
+                    it.name.contains(q, ignoreCase = true) ||
+                    it.description.contains(q, ignoreCase = true) ||
+                    it.category.contains(q, ignoreCase = true)
+                }
                 val withStatus = withContext(Dispatchers.IO) {
-                    recipes.map { recipe ->
+                    filtered.map { recipe ->
                         calculateAvailability(recipe.id, recipe.name, inventory)
                     }
                 }
                 _uiState.value = _uiState.value.copy(
-                    recipes = applyFilter(withStatus, _uiState.value.selectedTab)
+                    recipes = applyFilter(withStatus, _uiState.value.selectedTab),
+                    searchQuery = query
                 )
             }
         }
     }
 
     // ── List methods ──
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
 
     private suspend fun calculateAvailability(
         recipeId: Long, recipeName: String, inventory: List<InventoryItem>
@@ -120,15 +137,20 @@ class RecipeViewModel(
     }
 
     private fun applyFilter(recipes: List<RecipeWithStatus>, tab: Int): List<RecipeWithStatus> {
-        val sorted = recipes.sortedBy { when (it.availability) {
+        val availabilitySorted = recipes.sortedBy { when (it.availability) {
             Availability.FULL -> 0; Availability.PARTIAL -> 1; Availability.NONE -> 2
         } }
-        return when (tab) {
-            0 -> sorted
-            1 -> sorted.filter { it.availability == Availability.FULL }
-            2 -> sorted.filter { it.availability == Availability.PARTIAL }
-            3 -> sorted.filter { it.recipe.isFavorite }
-            else -> sorted
+        val tabFiltered = when (tab) {
+            0 -> availabilitySorted
+            1 -> availabilitySorted.filter { it.availability == Availability.FULL }
+            2 -> availabilitySorted.filter { it.availability == Availability.PARTIAL }
+            3 -> availabilitySorted.filter { it.recipe.isFavorite }
+            else -> availabilitySorted
+        }
+        return when (_uiState.value.sortOption) {
+            RecipeSortOption.NAME -> tabFiltered.sortedBy { it.recipe.name.lowercase() }
+            RecipeSortOption.RATING -> tabFiltered.sortedByDescending { it.recipe.rating }
+            RecipeSortOption.NEWEST -> tabFiltered.sortedByDescending { it.recipe.createDate }
         }
     }
 
@@ -136,6 +158,14 @@ class RecipeViewModel(
         viewModelScope.launch {
             val fullList = calculateAllStatuses()
             _uiState.value = _uiState.value.copy(selectedTab = tab, recipes = applyFilter(fullList, tab))
+        }
+    }
+
+    fun setSortOption(option: RecipeSortOption) {
+        val current = _uiState.value
+        viewModelScope.launch {
+            val fullList = calculateAllStatuses()
+            _uiState.value = current.copy(sortOption = option, recipes = applyFilter(fullList, current.selectedTab))
         }
     }
 

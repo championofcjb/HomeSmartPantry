@@ -86,7 +86,10 @@ fun EditIngredientScreen(
         return
     }
 
+    var ingredientName by remember { mutableStateOf(item.ingredientName) }
+    var category by remember { mutableStateOf(item.category) }
     var quantity by remember { mutableStateOf(formatQty(item.quantity)) }
+    var unit by remember { mutableStateOf(item.unit) }
     var storageLocation by remember { mutableStateOf(item.storageLocation) }
     var price by remember { mutableStateOf(item.price?.let { formatQty(it) } ?: "") }
     var expireDate by remember { mutableStateOf(item.expireDate) }
@@ -132,22 +135,21 @@ fun EditIngredientScreen(
         ) {
             Spacer(Modifier.height(8.dp))
 
-            // Name (read-only)
+            // Name (editable)
             OutlinedTextField(
-                value = item.ingredientName,
-                onValueChange = {},
+                value = ingredientName,
+                onValueChange = { ingredientName = it },
                 label = { Text("食材名称") },
-                enabled = false,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Category (read-only)
+            // Category (editable)
+            val categories = listOf("食材", "调味料", "主食粮油", "蔬菜", "水果", "肉类", "海鲜", "蛋奶", "干货", "饮品", "其他")
             OutlinedTextField(
-                value = item.category,
-                onValueChange = {},
+                value = category,
+                onValueChange = { category = it },
                 label = { Text("分类") },
-                enabled = false,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -225,11 +227,15 @@ fun EditIngredientScreen(
                     val qty = quantity.toDoubleOrNull()
                     if (qty != null && qty >= 0) {
                         onSave(qty, storageLocation, price.toDoubleOrNull(), expireDate)
-                        onBack()
+                        if (ingredientName != item.ingredientName || category != item.category || unit != item.unit) {
+                            onBack()
+                        } else {
+                            onBack()
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = quantity.toDoubleOrNull() != null
+                enabled = quantity.toDoubleOrNull() != null && ingredientName.isNotBlank()
             ) {
                 Text("保存修改")
             }

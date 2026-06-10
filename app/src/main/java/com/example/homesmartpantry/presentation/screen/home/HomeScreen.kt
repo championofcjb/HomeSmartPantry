@@ -125,36 +125,6 @@ fun HomeScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.primary)
-                    .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp)
-            ) {
-                Text(
-                    text = "HomeSmartPantry",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.align(Alignment.CenterStart)
-                )
-                IconButton(
-                    onClick = onShoppingListClick,
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                ) {
-                    BadgedBox(badge = {
-                        if (uiState.shoppingCount > 0) {
-                            Badge { Text("${uiState.shoppingCount}", style = MaterialTheme.typography.labelSmall) }
-                        }
-                    }) {
-                        Icon(
-                            Icons.Default.ShoppingCart,
-                            contentDescription = "采购清单",
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                }
-            }
         }
 
         // Expiry warning banner

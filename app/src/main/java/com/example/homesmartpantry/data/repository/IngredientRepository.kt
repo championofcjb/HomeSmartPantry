@@ -40,6 +40,14 @@ class IngredientRepository(
         return ingredientDao.insert(entity)
     }
 
+    suspend fun updateIngredient(id: Long, name: String, unit: String, category: String) {
+        ingredientDao.update(
+            com.example.homesmartpantry.data.local.entity.IngredientEntity(
+                id = id, name = name, unit = unit, category = category
+            )
+        )
+    }
+
     fun getAllInventory(): Flow<List<InventoryItem>> {
         return inventoryDao.getAllInventory().map { items ->
             items.map { it.toDomainModel() }
@@ -157,7 +165,7 @@ class IngredientRepository(
 
     private fun RecipeEntity.toDomain() = com.example.homesmartpantry.domain.model.Recipe(
         id, name, description, imageUri, category, difficulty, cookTime, servings,
-        isFavorite, rating, calories, protein, fat, notes
+        isFavorite, rating, calories, protein, fat, notes, createDate
     )
 
     fun getAllRecipes(): Flow<List<com.example.homesmartpantry.domain.model.Recipe>> {

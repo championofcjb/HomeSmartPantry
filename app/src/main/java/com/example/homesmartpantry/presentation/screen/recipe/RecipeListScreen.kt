@@ -65,22 +65,9 @@ fun RecipeListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var query by remember { mutableStateOf("") }
+    var searchText by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("菜谱") },
-            actions = {
-                IconButton(onClick = onFavoritesClick) {
-                    Icon(Icons.Default.Favorite, contentDescription = "收藏菜谱",
-                        tint = MaterialTheme.colorScheme.onPrimary)
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                titleContentColor = MaterialTheme.colorScheme.onPrimary
-            )
-        )
-
         // Filter chips
         val tabs = listOf("全部", "可做", "部分可做", "收藏")
         Row(
@@ -99,6 +86,13 @@ fun RecipeListScreen(
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 )
+            }
+            IconButton(
+                onClick = onFavoritesClick,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(Icons.Default.Favorite, contentDescription = "收藏菜谱",
+                    tint = MaterialTheme.colorScheme.primary)
             }
         }
 
@@ -131,16 +125,46 @@ fun RecipeListScreen(
             }
         }
 
+        // Sort chips
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            val sortOptions = listOf(
+                com.example.homesmartpantry.presentation.screen.recipe.RecipeSortOption.NAME to "名称",
+                com.example.homesmartpantry.presentation.screen.recipe.RecipeSortOption.RATING to "评分",
+                com.example.homesmartpantry.presentation.screen.recipe.RecipeSortOption.NEWEST to "最新"
+            )
+            sortOptions.forEach { (option, label) ->
+                FilterChip(
+                    selected = uiState.sortOption == option,
+                    onClick = { viewModel.setSortOption(option) },
+                    label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                )
+            }
+        }
+
         // Search bar
-        var searchQuery by remember { mutableStateOf("") }
         OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
+            value = searchText,
+            onValueChange = {
+                searchText = it
+                viewModel.setSearchQuery(it)
+            },
             placeholder = { Text("搜索菜谱...") },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "搜索") },
             trailingIcon = {
-                if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { searchQuery = "" }) {
+                if (searchText.isNotEmpty()) {
+                    IconButton(onClick = {
+                        searchText = ""
+                        viewModel.setSearchQuery("")
+                    }) {
                         Icon(Icons.Default.Close, contentDescription = "清除")
                     }
                 }
@@ -154,15 +178,7 @@ fun RecipeListScreen(
 
         val categoryFiltered = if (selectedCategory.isBlank()) uiState.recipes
         else uiState.recipes.filter { it.recipe.category == selectedCategory }
-
-        val filteredRecipes = if (searchQuery.isBlank()) categoryFiltered
-        else categoryFiltered.filter {
-            val q = searchQuery.lowercase()
-            it.recipe.name.contains(q, ignoreCase = true) ||
-            it.recipe.description.contains(q, ignoreCase = true) ||
-            it.recipe.category.contains(q, ignoreCase = true) ||
-            it.missingIngredients.any { ing -> ing.contains(q, ignoreCase = true) }
-        }
+        val filteredRecipes = categoryFiltered
 
         if (filteredRecipes.isEmpty()) {
             Box(
@@ -170,7 +186,7 @@ fun RecipeListScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (searchQuery.isNotBlank()) "没有找到匹配的菜谱"
+                    text = if (searchText.isNotBlank()) "没有找到匹配的菜谱"
                            else "还没有菜谱\n点击右下角 + 添加吧",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -255,6 +271,20 @@ private fun RecipeCard(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
+                Spacer(modifier = Modifier.height(2.dp))
+                val daysSince = (System.currentTimeMillis() - recipeWithStatus.recipe.createDate) /
+                    (24 * 60 * 60 * 1000)
+                Text(
+                    text = when {
+                        daysSince < 1 -> "今天创建"
+                        daysSince == 1L -> "昨天创建"
+                        daysSince < 7 -> "${daysSince}天前创建"
+                        daysSince < 30 -> "${daysSince / 7}周前创建"
+                        else -> "${daysSince / 30}个月前创建"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
             }
 
             if (recipeWithStatus.recipe.isFavorite) {
