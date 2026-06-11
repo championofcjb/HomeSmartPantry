@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,7 +39,8 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onShoppingListClick: () -> Unit,
     onFavoritesClick: () -> Unit = {},
-    onTodayCookClick: () -> Unit = {}
+    onTodayCookClick: () -> Unit = {},
+    onExportData: () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -91,9 +93,22 @@ fun SettingsScreen(
 
             item {
                 SettingsCard(
+                    icon = Icons.Default.Share,
+                    title = "导出数据",
+                    subtitle = "分享库存和菜谱数据",
+                    onClick = onExportData
+                )
+            }
+
+            item {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            }
+
+            item {
+                SettingsCard(
                     icon = Icons.Default.Info,
                     title = "关于",
-                    subtitle = "HomeSmartPantry v1.0 — 家庭食材管理助手"
+                    subtitle = "HomeSmartPantry v1.0\n一个简单的家庭食材管理工具，轻松管理库存、菜谱和采购清单。"
                 ) {}
             }
 
@@ -107,7 +122,7 @@ private fun SettingsCard(
     icon: ImageVector,
     title: String,
     subtitle: String,
-    onClick: () -> Unit
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clickable(onClick = onClick),

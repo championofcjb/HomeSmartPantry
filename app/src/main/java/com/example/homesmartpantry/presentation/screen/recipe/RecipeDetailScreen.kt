@@ -3,6 +3,8 @@ package com.example.homesmartpantry.presentation.screen.recipe
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.Brush
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -187,11 +189,11 @@ fun RecipeDetailScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     if (recipe.imageUri != null) {
-                        coil.compose.AsyncImage(
+                        AsyncImage(
                             model = recipe.imageUri,
                             contentDescription = "菜谱图片",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                            contentScale = ContentScale.Crop
                         )
                     } else {
                         Box(

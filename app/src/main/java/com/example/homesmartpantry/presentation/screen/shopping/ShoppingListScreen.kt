@@ -2,6 +2,7 @@ package com.example.homesmartpantry.presentation.screen.shopping
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,13 +18,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,8 +46,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -53,19 +59,22 @@ import kotlinx.coroutines.flow.Flow
 @Composable
 fun ShoppingListScreen(
     shoppingItems: Flow<List<ShoppingItemEntity>>,
+    knownIngredients: List<com.example.homesmartpantry.domain.model.Ingredient> = emptyList(),
     onMarkPurchased: (Long) -> Unit,
     onMarkUnpurchased: (Long) -> Unit = {},
     onDelete: (Long) -> Unit,
     onClearPurchased: () -> Unit,
     onBack: () -> Unit,
     onAddItem: (String, String, String) -> Unit = { _, _, _ -> },
-    onUpdateItem: (Long, String, String, String) -> Unit = { _, _, _, _ -> }
+    onUpdateItem: (Long, String, String, String) -> Unit = { _, _, _, _ -> },
+    onAddToInventory: (String, Double, String, String, Long?) -> Unit = { _, _, _, _, _ -> }
 ) {
     val items by shoppingItems.collectAsState(initial = emptyList())
     val unpurchased = items.filter { !it.isPurchased }
     val purchased = items.filter { it.isPurchased }
     var showAddDialog by remember { mutableStateOf(false) }
     var editingItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
+    var purchasingItem by remember { mutableStateOf<ShoppingItemEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -130,8 +139,11 @@ fun ShoppingListScreen(
                     ShoppingItemRow(
                         item = item,
                         onToggle = {
-                            if (item.isPurchased) onMarkUnpurchased(item.id)
-                            else onMarkPurchased(item.id)
+                            if (item.isPurchased) {
+                                onMarkUnpurchased(item.id)
+                            } else {
+                                purchasingItem = item
+                            }
                         },
                         onDelete = { onDelete(item.id) },
                         onEdit = { editingItem = item }
@@ -167,6 +179,7 @@ fun ShoppingListScreen(
     // Add dialog
     if (showAddDialog) {
         AddShoppingItemDialog(
+            knownIngredients = knownIngredients,
             onConfirm = { name, qty, unit ->
                 onAddItem(name, qty, unit)
                 showAddDialog = false
@@ -184,6 +197,23 @@ fun ShoppingListScreen(
                 editingItem = null
             },
             onDismiss = { editingItem = null }
+        )
+    }
+
+    // Purchase → add to inventory dialog
+    purchasingItem?.let { item ->
+        AddToInventoryDialog(
+            itemName = item.ingredientName,
+            defaultQuantity = item.quantity,
+            defaultUnit = item.unit,
+            onConfirm = { qty, loc, unit, expireDate ->
+                onAddToInventory(item.ingredientName, qty, loc, unit, expireDate)
+                onMarkPurchased(item.id)
+                purchasingItem = null
+            },
+            onDismiss = {
+                purchasingItem = null
+            }
         )
     }
 }
@@ -236,14 +266,21 @@ private fun ShoppingItemRow(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AddShoppingItemDialog(
+    knownIngredients: List<com.example.homesmartpantry.domain.model.Ingredient> = emptyList(),
     onConfirm: (String, String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var quantity by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf("") }
+    var showSuggestions by remember { mutableStateOf(false) }
+
+    val suggestions = if (name.isNotBlank()) {
+        knownIngredients.filter { it.name.contains(name, ignoreCase = true) }.take(5)
+    } else emptyList()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -252,11 +289,48 @@ private fun AddShoppingItemDialog(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = {
+                        name = it
+                        showSuggestions = true
+                    },
                     label = { Text("食材名称") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // Suggestions
+                if (showSuggestions && suggestions.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Column {
+                            suggestions.forEach { ing ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            name = ing.name
+                                            if (unit.isBlank()) unit = ing.unit
+                                            showSuggestions = false
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(ing.name, style = MaterialTheme.typography.bodyMedium)
+                                        Text("${ing.unit} · ${ing.category}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = quantity,
@@ -274,6 +348,25 @@ private fun AddShoppingItemDialog(
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
+                }
+
+                // Quick add common ingredients
+                if (name.isBlank()) {
+                    val commonIngredients = knownIngredients.take(8)
+                    if (commonIngredients.isNotEmpty()) {
+                        Text("快速添加:", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            commonIngredients.forEach { ing ->
+                                androidx.compose.material3.FilterChip(
+                                    selected = false,
+                                    onClick = { name = ing.name; if (unit.isBlank()) unit = ing.unit },
+                                    label = { Text(ing.name, style = MaterialTheme.typography.labelSmall) }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -341,4 +434,82 @@ private fun EditShoppingItemDialog(
             TextButton(onClick = onDismiss) { Text("取消") }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddToInventoryDialog(
+    itemName: String,
+    defaultQuantity: String,
+    defaultUnit: String,
+    onConfirm: (Double, String, String, Long?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var quantity by remember { mutableStateOf(defaultQuantity) }
+    var unit by remember { mutableStateOf(defaultUnit) }
+    var storageLocation by remember { mutableStateOf("冰箱冷藏") }
+    var expireDate by remember { mutableStateOf<Long?>(null) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    val dateFormat = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("添加到库存") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("将「$itemName」添加到库存", style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = quantity, onValueChange = {
+                        if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) quantity = it
+                    }, label = { Text("数量") }, singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = unit, onValueChange = { unit = it },
+                        label = { Text("单位") }, singleLine = true, modifier = Modifier.weight(1f))
+                }
+                OutlinedTextField(value = storageLocation, onValueChange = { storageLocation = it },
+                    label = { Text("存放位置") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = expireDate?.let { dateFormat.format(java.util.Date(it)) } ?: "未设置",
+                    onValueChange = {}, label = { Text("过期日期") }, readOnly = true,
+                    singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        TextButton(onClick = { showDatePicker = true }) {
+                            Text(if (expireDate == null) "设置" else "修改")
+                        }
+                    })
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val qty = quantity.toDoubleOrNull()
+                if (qty != null && qty > 0) {
+                    onConfirm(qty, storageLocation, unit, expireDate)
+                }
+            }, enabled = quantity.toDoubleOrNull() != null) {
+                Text("添加到库存")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("跳过") }
+        }
+    )
+
+    if (showDatePicker) {
+        val datePickerState = androidx.compose.material3.rememberDatePickerState(
+            initialSelectedDateMillis = expireDate ?: System.currentTimeMillis()
+        )
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = { expireDate = datePickerState.selectedDateMillis; showDatePicker = false }) {
+                    Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("取消") }
+            }
+        ) {
+            androidx.compose.material3.DatePicker(state = datePickerState)
+        }
+    }
 }

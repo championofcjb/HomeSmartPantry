@@ -133,6 +133,7 @@ fun AddEditRecipeScreen(
             protein = d.recipe.protein
             fat = d.recipe.fat
             notes = d.recipe.notes
+            imageUri = d.recipe.imageUri
             d.ingredients.forEach { ingredients.add(RecipeFormIngredient(it.ingredientName, it.quantity, it.unit)) }
             d.steps.forEach { steps.add(it.description) }
             d.tags.forEach { tags.add(it) }

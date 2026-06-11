@@ -1,10 +1,11 @@
 package com.example.homesmartpantry.presentation.component
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Kitchen
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -14,7 +15,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -29,7 +29,8 @@ data class BottomNavItem(
 
 val bottomNavItems = listOf(
     BottomNavItem("Home", Icons.Default.Kitchen, NavRoutes.HOME),
-    BottomNavItem("菜谱", Icons.Default.MenuBook, NavRoutes.RECIPES),
+    BottomNavItem("菜谱", Icons.AutoMirrored.Filled.MenuBook, NavRoutes.RECIPES),
+    BottomNavItem("采购", Icons.Default.ShoppingCart, NavRoutes.SHOPPING_LIST),
     BottomNavItem("今日做菜", Icons.Default.Restaurant, NavRoutes.TODAY_COOK),
     BottomNavItem("设置", Icons.Default.Settings, NavRoutes.SETTINGS)
 )

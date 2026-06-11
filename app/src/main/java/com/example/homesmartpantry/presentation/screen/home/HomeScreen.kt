@@ -55,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -71,6 +72,7 @@ fun HomeScreen(
     onRecipesClick: () -> Unit = {},
     onShoppingListClick: () -> Unit = {},
     onEditItemClick: (Long) -> Unit = {},
+    onAddToShoppingList: (String, String, String) -> Unit = { _, _, _ -> },
     onSelectionModeChanged: (Boolean) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -380,7 +382,10 @@ fun HomeScreen(
                             onUpdateQuantity = { newQty ->
                                 viewModel.updateQuantity(item.id, newQty)
                             },
-                            onEditClick = { onEditItemClick(item.id) }
+                            onEditClick = { onEditItemClick(item.id) },
+                            onAddToShoppingList = {
+                                onAddToShoppingList(item.ingredientName, formatQuantity(item.quantity), item.unit)
+                            }
                         )
                     }
                 }
@@ -398,7 +403,8 @@ fun InventoryCard(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onUpdateQuantity: (Double) -> Unit,
-    onEditClick: (() -> Unit)? = null
+    onEditClick: (() -> Unit)? = null,
+    onAddToShoppingList: (() -> Unit)? = null
 ) {
     var showQuantityDialog by remember { mutableStateOf(false) }
 
@@ -445,7 +451,7 @@ fun InventoryCard(
             // Category emoji or image icon
             if (!isSelectionMode) {
                 if (item.imageUri != null) {
-                    coil.compose.AsyncImage(
+                    AsyncImage(
                         model = item.imageUri,
                         contentDescription = null,
                         modifier = Modifier
@@ -560,11 +566,20 @@ fun InventoryCard(
                         item.isExpiringSoon -> MaterialTheme.colorScheme.tertiary
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
-                    Text(
-                        text = "过期: $dateStr",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = statusColor
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(text = "过期: $dateStr",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = statusColor)
+                        // Add to shopping list button for expired/expiring items
+                        if ((item.isExpired || item.isExpiringSoon) && onAddToShoppingList != null && !isSelectionMode) {
+                            Spacer(Modifier.width(8.dp))
+                            IconButton(onClick = onAddToShoppingList, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.ShoppingCart, contentDescription = "加入采购清单",
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
                 }
 
                 // Purchase date

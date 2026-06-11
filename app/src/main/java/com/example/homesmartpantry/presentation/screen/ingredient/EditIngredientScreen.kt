@@ -48,7 +48,8 @@ fun EditIngredientScreen(
     item: InventoryItem?,
     onBack: () -> Unit,
     onSave: (Double, String, Double?, Long?) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onUpdateIngredient: (String, String, String) -> Unit = { _, _, _ -> }
 ) {
     if (item == null) {
         // Item not loaded yet or not found
@@ -228,10 +229,9 @@ fun EditIngredientScreen(
                     if (qty != null && qty >= 0) {
                         onSave(qty, storageLocation, price.toDoubleOrNull(), expireDate)
                         if (ingredientName != item.ingredientName || category != item.category || unit != item.unit) {
-                            onBack()
-                        } else {
-                            onBack()
+                            onUpdateIngredient(ingredientName, category, unit)
                         }
+                        onBack()
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),

@@ -19,20 +19,29 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +63,89 @@ fun TodayCookScreen(
     onBack: () -> Unit
 ) {
     val todayList by viewModel.todayCookList.collectAsState()
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    var batchResult by remember { mutableStateOf<RecipeViewModel.BatchCookResult?>(null) }
+
+    // Confirmation dialog
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = { Text("批量开始做菜") },
+            text = {
+                Text("即将开始制作今日全部 ${todayList.size} 道菜，\n" +
+                    "库存充足的食材将被自动扣除，\n" +
+                    "缺少的食材将加入采购清单。\n\n是否继续？")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showConfirmDialog = false
+                        viewModel.batchCookToday { result ->
+                            batchResult = result
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34A853))
+                ) {
+                    Text("开始做菜")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    // Result dialog
+    batchResult?.let { result ->
+        AlertDialog(
+            onDismissRequest = { batchResult = null },
+            title = { Text("批量做菜完成") },
+            text = {
+                Column {
+                    if (result.cookedRecipeNames.isNotEmpty()) {
+                        Text(
+                            "✅ 成功制作 (${result.cookedRecipeNames.size})",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF34A853)
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        result.cookedRecipeNames.forEach { name ->
+                            Text("  • $name", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    if (result.addedToCart.isNotEmpty()) {
+                        HorizontalDivider()
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "🛒 已加入采购清单 (${result.addedToCart.size})",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFEA4335)
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        result.addedToCart.forEach { (name, qty) ->
+                            Text("  • $name × $qty", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    if (result.cookedRecipeNames.isEmpty() && result.addedToCart.isEmpty()) {
+                        Text("没有可操作的菜谱", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { batchResult = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34A853))
+                ) {
+                    Text("好的")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -118,7 +210,25 @@ fun TodayCookScreen(
                     )
                 }
 
-                item { Spacer(Modifier.height(16.dp)) }
+                // Batch cook button
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        onClick = { showConfirmDialog = true },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF34A853))
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "批量开始做菜（${todayList.size}道）",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
             }
         }
     }

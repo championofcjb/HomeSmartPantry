@@ -2,6 +2,7 @@ package com.example.homesmartpantry.presentation.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +60,11 @@ fun AppNavHost(
                 },
                 onShoppingListClick = { navController.navigate(NavRoutes.SHOPPING_LIST) },
                 onEditItemClick = { id -> navController.navigate(NavRoutes.editInventory(id)) },
+                onAddToShoppingList = { name, qty, unit ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        repository.addSingleShoppingItem(name, qty, unit)
+                    }
+                },
                 onSelectionModeChanged = onSelectionModeChanged
             )
         }
@@ -115,8 +121,11 @@ fun AppNavHost(
         }
 
         composable(NavRoutes.SHOPPING_LIST) {
+            val ingredients by repository.getAllIngredients().collectAsState(initial = emptyList())
+
             ShoppingListScreen(
                 shoppingItems = repository.getShoppingItems(),
+                knownIngredients = ingredients,
                 onMarkPurchased = { id ->
                     CoroutineScope(Dispatchers.IO).launch { repository.markPurchased(id) }
                 },
@@ -139,6 +148,22 @@ fun AppNavHost(
                     CoroutineScope(Dispatchers.IO).launch {
                         repository.updateShoppingItem(id, name, qty, unit)
                     }
+                },
+                onAddToInventory = { name, qty, loc, unit, expireDate ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val allIngs = repository.getAllIngredients().first()
+                        val existing = allIngs.find { it.name.equals(name, ignoreCase = true) }
+                        val ingredientId = if (existing != null) {
+                            existing.id
+                        } else {
+                            repository.addIngredient(name, unit, "食材")
+                        }
+                        repository.addInventory(
+                            ingredientId = ingredientId, quantity = qty,
+                            storageLocation = loc, expireDate = expireDate,
+                            purchaseDate = System.currentTimeMillis()
+                        )
+                    }
                 }
             )
         }
@@ -153,6 +178,38 @@ fun AppNavHost(
                         popUpTo(NavRoutes.HOME) { saveState = true }
                         launchSingleTop = true
                         restoreState = true
+                    }
+                },
+                onExportData = {
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        val items = repository.getAllInventory().first()
+                        val recipes = repository.getAllRecipes().first()
+                        val shopping = repository.getShoppingItems().first()
+
+                        val sb = StringBuilder()
+                        sb.appendLine("=== HomeSmartPantry 数据导出 ===")
+                        sb.appendLine("导出时间: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date())}")
+                        sb.appendLine()
+
+                        sb.appendLine("--- 库存 (${items.size} 项) ---")
+                        items.forEach { sb.appendLine("  ${it.ingredientName} × ${it.quantity} ${it.unit} [${it.storageLocation}]") }
+
+                        sb.appendLine()
+                        sb.appendLine("--- 菜谱 (${recipes.size} 个) ---")
+                        recipes.forEach { sb.appendLine("  ${it.name} (${it.category})") }
+
+                        sb.appendLine()
+                        val unpurchased = shopping.filter { !it.isPurchased }
+                        sb.appendLine("--- 待采购 (${unpurchased.size} 项) ---")
+                        unpurchased.forEach { sb.appendLine("  ${it.ingredientName} ${it.quantity} ${it.unit}") }
+
+                        val ctx = navController.context
+                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, sb.toString())
+                            putExtra(android.content.Intent.EXTRA_SUBJECT, "HomeSmartPantry 数据导出")
+                        }
+                        ctx.startActivity(android.content.Intent.createChooser(intent, "分享数据"))
                     }
                 }
             )
@@ -214,6 +271,14 @@ fun AppNavHost(
                         repository.deleteInventory(inventoryId)
                     }
                     navController.popBackStack()
+                },
+                onUpdateIngredient = { name, cat, unit ->
+                    val ingId = inventoryItem.value?.ingredientId
+                    if (ingId != null) {
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                            repository.updateIngredient(ingId, name, unit, cat)
+                        }
+                    }
                 }
             )
         }

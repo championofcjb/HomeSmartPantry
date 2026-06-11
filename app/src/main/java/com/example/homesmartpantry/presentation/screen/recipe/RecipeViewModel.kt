@@ -295,20 +295,117 @@ class RecipeViewModel(
         data class AddToCart(val count: Int) : CookTodayResult()
     }
 
+    // ── Batch cook result ──
+    data class BatchCookResult(
+        val cookedRecipeNames: List<String>,
+        val addedToCart: List<Pair<String, String>>
+    )
+
     fun cookToday(onResult: (CookTodayResult) -> Unit) {
         val all = _detailState.value.ingredients
-        val sufficient = all.none { it.status != IngredientStockStatus.SUFFICIENT }
-        if (sufficient) {
-            onResult(CookTodayResult.CanCook)
-            return
-        }
+        val recipeId = _detailState.value.recipe?.id ?: return
+        val missing = all.filter { it.status == IngredientStockStatus.MISSING }
+        val sufficient = missing.isEmpty()
+
         viewModelScope.launch {
-            repository.addToShoppingList(all.map {
-                com.example.homesmartpantry.domain.model.ShoppingItem(
-                    ingredientName = it.name, quantity = it.requiredQty, unit = it.unit
-                )
-            })
-            onResult(CookTodayResult.AddToCart(all.size))
+            if (sufficient) {
+                // 所有食材充足 → 扣减库存
+                deductInventory(all.map {
+                    Pair(it.name, it.requiredQty)
+                })
+                // 加入今日做菜
+                repository.addToTodayCook(recipeId)
+                onResult(CookTodayResult.CanCook)
+            } else {
+                // 有缺失食材 → 仅将缺失的加入购物清单
+                repository.addToShoppingList(missing.map {
+                    com.example.homesmartpantry.domain.model.ShoppingItem(
+                        ingredientName = it.name, quantity = it.requiredQty, unit = it.unit
+                    )
+                })
+                onResult(CookTodayResult.AddToCart(missing.size))
+            }
+        }
+    }
+
+    /**
+     * 从库存中扣除指定食材（单菜谱使用）
+     */
+    private suspend fun deductInventory(ingredients: List<Pair<String, String>>) {
+        for ((name, qtyStr) in ingredients) {
+            val required = qtyStr.toDoubleOrNull() ?: continue
+            val inventoryItems = allInventory.filter {
+                it.ingredientName.contains(name, ignoreCase = true) && it.quantity > 0
+            }
+            var remaining = required
+            for (inv in inventoryItems) {
+                if (remaining <= 0) break
+                val deduct = minOf(remaining, inv.quantity)
+                repository.updateQuantity(inv.id, inv.quantity - deduct)
+                remaining -= deduct
+            }
+        }
+    }
+
+    /**
+     * 批量开始做菜：遍历今日做菜列表，对每个菜谱扣减库存，
+     * 缺失食材汇总去重后加入采购清单
+     */
+    fun batchCookToday(onResult: (BatchCookResult) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val allMissing = mutableListOf<RecipeIngredient>()
+            val cookedNames = mutableListOf<String>()
+            val list = _todayCookList.value.toList()
+
+            for (item in list) {
+                val ingredients = repository.getRecipeIngredientsOnce(item.id)
+                val missing = mutableListOf<RecipeIngredient>()
+                val sufficient = mutableListOf<Pair<String, String>>()
+
+                for (ing in ingredients) {
+                    val required = ing.quantity.toDoubleOrNull() ?: continue
+                    val inventoryItems = allInventory.filter {
+                        it.ingredientName.contains(ing.ingredientName, ignoreCase = true) && it.quantity > 0
+                    }
+                    val totalStock = inventoryItems.sumOf { it.quantity }
+                    if (totalStock >= required) {
+                        sufficient.add(Pair(ing.ingredientName, ing.quantity))
+                    } else {
+                        missing.add(ing)
+                    }
+                }
+
+                if (missing.isEmpty()) {
+                    // 扣减库存
+                    deductInventory(sufficient)
+                    cookedNames.add(item.name)
+                } else {
+                    allMissing.addAll(missing)
+                }
+            }
+
+            // 汇总去重缺失食材
+            val aggregated = allMissing.groupBy { it.ingredientName.lowercase() }
+                .map { (_, items) ->
+                    val first = items.first()
+                    val totalQty = items.sumOf { it.quantity.toDoubleOrNull() ?: 0.0 }
+                    first.ingredientName to "${formatQty(totalQty)} ${first.unit}"
+                }
+
+            if (aggregated.isNotEmpty()) {
+                repository.addToShoppingList(aggregated.map {
+                    val parts = it.second.split(" ")
+                    com.example.homesmartpantry.domain.model.ShoppingItem(
+                        ingredientName = it.first,
+                        quantity = parts.getOrElse(0) { "0" },
+                        unit = parts.getOrElse(1) { "" }
+                    )
+                })
+            }
+
+            withContext(Dispatchers.Main) {
+                onResult(BatchCookResult(cookedNames, aggregated))
+            }
         }
     }
 
